@@ -33,10 +33,10 @@ def min_max_normalization(arr: np.array, max_val: float) -> np.ndarray:
 
 
 def plot(train_error: np.array, test_error: np.array, conf: Config):
-    max_val = np.max(train_error) if test_error.size is None else np.max([np.max(train_error), np.max(test_error)])
-    plt.plot(range(conf.epochs), min_max_normalization(train_error, max_val), label="Training data error")
+    # max_val = np.max(train_error) if test_error.size is None else np.max([np.max(train_error), np.max(test_error)])
+    plt.plot(range(conf.epochs), train_error, label="Training data error")
     if test_error.size:
-        plt.plot(range(conf.epochs), min_max_normalization(test_error, max_val), label="Test data error")
+        plt.plot(range(conf.epochs), test_error, label="Test data error")
 
     plt.xlabel("Epoch")
     plt.title(f"Error evolution over epochs. hidden={conf.hidden_layer_size}, l_rate={conf.learning_rate}")
@@ -46,11 +46,11 @@ def plot(train_error: np.array, test_error: np.array, conf: Config):
 
 if __name__ == "__main__":
     config = Config(**{
-        "hidden_layer_size": 128,
+        "hidden_layer_size": 256,
         "hidden_layer_activation": ReLU(),
         "output_layer_activation": Sigmoid(),
         "epochs": 10,
-        "learning_rate": 0.2,
+        "learning_rate": 0.3,
     })
 
     # load data
@@ -73,13 +73,12 @@ if __name__ == "__main__":
                 activation=config.output_layer_activation
             )
         ],
-        train_size=train_data.shape[0],
         lr=config.learning_rate,
     )
 
     # train model
     model.train(train_data, test_data, epochs=config.epochs)
+    model.all_epochs()
 
     # plot results
     plot(model.train_error_evo, model.test_error_evo, conf=config)
-

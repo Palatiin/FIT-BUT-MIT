@@ -4,7 +4,7 @@
 # Date: 2023-11-24
 # Description: Autoencoder model class definition
 
-from typing import List, Optional
+from typing import Generator, List, Optional
 
 import numpy as np
 
@@ -19,9 +19,8 @@ class AutoencoderModel:
     neural network has two layers, and is trained by backpropagation algorithm.
     """
 
-    def __init__(self, layers: List[Layer], train_size: int, lr: float = 0.1):
+    def __init__(self, layers: List[Layer], lr: float = 0.1):
         self.layers: List[Layer] = layers
-        self.train_size: int = train_size
         self.learning_rate: float = lr
 
         self.error: List[float] = []
@@ -32,6 +31,8 @@ class AutoencoderModel:
 
         self.train_error_evolution: List[float] = []
         self.test_error_evolution: List[float] = []
+
+        self.train_handle: Optional[Generator] = None
 
     @property
     def train_error_evo(self) -> np.array:
@@ -45,8 +46,6 @@ class AutoencoderModel:
         self.hidden_output.append(self.layers[0].forward(x))
         self.output.append(self.layers[1].forward(self.hidden_output[-1]))
 
-        self.error.append(self.loss(self.output[-1], x) / self.train_size)
-
         return self.output[-1]
 
     def backward_pass(self, target: np.ndarray) -> None:
@@ -58,8 +57,8 @@ class AutoencoderModel:
         delta_hidden = _error_hidden * self.layers[0].backward(self.hidden_output[-1])
 
         # update weights
-        self.layers[1].weights -= self.learning_rate * np.dot(self.hidden_output[-1].T, delta_output) / self.train_size
-        self.layers[0].weights -= self.learning_rate * np.dot(target.T, delta_hidden) / self.train_size
+        self.layers[1].weights -= self.learning_rate * np.dot(self.hidden_output[-1].T, delta_output) / target.shape[0]
+        self.layers[0].weights -= self.learning_rate * np.dot(target.T, delta_hidden) / target.shape[0]
 
         # prepare for next epoch
         self.error = []
@@ -68,19 +67,38 @@ class AutoencoderModel:
     def train(
         self, train_data: np.ndarray, test_data: Optional[np.ndarray] = None, epochs: Optional[int] = 20
     ) -> None:
+        self.train_handle = self._train(train_data, test_data, epochs)
+
+    def _train(
+        self, train_data: np.ndarray, test_data: Optional[np.ndarray] = None, epochs: Optional[int] = 20
+    ) -> Optional[Generator]:
         for epoch in range(epochs):
+            yield
             np.random.shuffle(train_data)
 
             if test_data is not None:
                 self.forward_pass(test_data)
-                self.test_error_evolution.append(self.error[0])
+                self.error.append(self.loss(self.output[-1], test_data) / test_data.shape[0])
+                self.test_error_evolution.append(self.error[-1])
 
             self.forward_pass(train_data)
+            self.error.append(self.loss(self.output[-1], train_data) / train_data.shape[0])
             self.train_error_evolution.append(self.error[-1])
 
             print(f"Epoch: {epoch + 1} | Error: {self.error}")
 
             self.backward_pass(train_data)
+
+        self.train_handle = None
+
+    def next_epoch(self):
+        if self.train_handle:
+            self.train_handle.__iter__().__next__()
+
+    def all_epochs(self):
+        if self.train_handle:
+            for _ in self.train_handle:
+                ...
 
     @staticmethod
     def loss(output: np.ndarray, target: np.ndarray) -> float:
