@@ -44,7 +44,7 @@
             </thead>
             <tbody>
                 {% for key, value in form_data.items() %}
-                    {% if key != 'action' %}
+                    {% if key != 'action' and key != 'image' %}
                         <tr>
                             <input type="hidden" name="{{ key }}" value="{{ value }}">
                             <td>{{ key }}</td>
@@ -57,12 +57,22 @@
 
         <button onclick="onButtonClick('full')" type="submit">All Epochs</button>
         <button onclick="onButtonClick('step')" type="submit">One Epoch</button>
-    </form>
 
     {% if plot %}
         <h2>Training Progress</h2>
         <img src="{{ plot }}" alt="Training Progress Plot">
     {% endif %}
+
+    {% if plot %}
+        <label for="image">Upload Image:</label>
+        <input type="file" id="image" name="image" accept=".gif">
+        <button onclick="onButtonClick('image')" type="submit">Feed Image</button>
+        {% if img_nn %}
+            <h2>Image from the autoencoder</h2>
+            <img src="{{ img_nn }}" alt="Image">
+        {% endif %}
+    {% endif %}
+    </form>
 
 </body>
 </html>

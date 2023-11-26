@@ -49,16 +49,17 @@ class AutoencoderModel:
         return self.output[-1]
 
     def backward_pass(self, target: np.ndarray) -> None:
+        # partially inspired by: https://machinelearninggeek.com/backpropagation-neural-network-using-python/
         # calculate weight deltas
-        _error_output = self.output[-1] - target
+        _error_output = target - self.output[-1]
         delta_output = _error_output * self.layers[1].backward(self.output[-1])
 
         _error_hidden = delta_output.dot(self.layers[1].weights.T)
         delta_hidden = _error_hidden * self.layers[0].backward(self.hidden_output[-1])
 
         # update weights
-        self.layers[1].weights -= self.learning_rate * np.dot(self.hidden_output[-1].T, delta_output) / target.shape[0]
-        self.layers[0].weights -= self.learning_rate * np.dot(target.T, delta_hidden) / target.shape[0]
+        self.layers[1].weights += self.learning_rate * np.dot(self.hidden_output[-1].T, delta_output) / target.shape[0]
+        self.layers[0].weights += self.learning_rate * np.dot(target.T, delta_hidden) / target.shape[0]
 
         # prepare for next epoch
         self.error = []

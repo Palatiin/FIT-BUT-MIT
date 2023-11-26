@@ -5,16 +5,17 @@
 # Description: Simple web UI
 import base64
 import io
+import os.path
 from typing import Optional
-
-from matplotlib import pyplot as plt
 
 from run import Config
 from src.functions import Linear, ReLU, Sigmoid
 from src.layers import Layer
 from src.model import AutoencoderModel
 
+import imageio
 import numpy as np
+from matplotlib import pyplot as plt
 
 from flask import Flask, render_template, request
 
@@ -90,6 +91,36 @@ def generate_plot():
     return f"data:image/png;base64,{encoded_image}"
 
 
+def gif_to_numpy(file_path):
+    # Read the GIF file
+    gif_reader = imageio.get_reader(os.path.join("data", "train", "00000-00999", file_path))
+
+    # Initialize an empty list to store frames
+    frames = []
+
+    # Iterate through each frame in the GIF
+    for frame in gif_reader:
+        frames.append(frame)
+
+    # Convert the list of frames to a NumPy array
+    gif_array = frames[0].flatten() / 255.0
+
+    return gif_array
+
+
+def plot_image(image: np.ndarray):
+    plt.imshow(image, cmap="gray")
+    plt.title('Recreated Image')
+    img_bytes = io.BytesIO()
+    plt.savefig(img_bytes, format='png')
+    img_bytes.seek(0)
+    plt.close()
+
+    encoded_image = base64.b64encode(img_bytes.read()).decode('utf-8')
+
+    return f"data:image/png;base64,{encoded_image}"
+
+
 @app.route("/ping")
 def ping():
     return "pong"
@@ -104,18 +135,26 @@ def index():
 def train():
     global model
 
-    if not request.form.get("action") or request.form.get("action") not in ("step", "full"):
+    if not request.form.get("action") or request.form.get("action") not in ("step", "full", "image"):
         init_model(request.form.to_dict())
         load_dataset_and_prepare_for_training()
         return render_template("train.html", form_data=request.form.to_dict())
 
+    image_nn = None
     if request.form.get("action") == "step":
         model.next_epoch()
     elif request.form.get("action") == "full":
         model.all_epochs()
+    elif request.form.get("action") == "image":
+        image_in = gif_to_numpy(request.form.get("image"))
+        output = model.forward_pass(image_in)
+        output *= 255.0
+        image_nn = plot_image(output.reshape(28, 28))
 
     plot = generate_plot()
     if plot:
+        if image_nn:
+            return render_template("train.html", form_data=request.form.to_dict(), plot=plot, img_nn=image_nn)
         return render_template("train.html", form_data=request.form.to_dict(), plot=plot)
     return render_template("train.html", form_data=request.form.to_dict())
 
