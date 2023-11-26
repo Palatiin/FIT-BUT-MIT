@@ -92,13 +92,15 @@ class AutoencoderModel:
         self.train_handle = None
 
     def next_epoch(self):
-        if self.train_handle:
+        try:
             self.train_handle.__iter__().__next__()
+        except Exception as e:
+            ...
 
     def all_epochs(self):
         if self.train_handle:
             for _ in self.train_handle:
-                ...
+                pass
 
     @staticmethod
     def loss(output: np.ndarray, target: np.ndarray) -> float:

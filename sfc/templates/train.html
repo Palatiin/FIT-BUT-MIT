@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SFC - Autoencoder NN</title>
+    <style>
+        table {
+            width: 50%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+    </style>
+    <script>
+        function onButtonClick(action) {
+            const form = document.getElementById("trainForm");
+            const input = document.createElement("input");
+            input.type = "hidden";
+            input.name = "action";
+            input.value = action;
+
+            form.appendChild(input);
+            form.submit();
+        }
+    </script>
+</head>
+<body>
+    <h1>Autoencoder Neural Network Training</h1>
+
+    <h2>Configuration</h2>
+    <form id="trainForm" action="/train" method="post">
+        <table>
+            <thead>
+                <tr>
+                    <th>Config Name</th>
+                    <th>Config Value</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for key, value in form_data.items() %}
+                    {% if key != 'action' %}
+                        <tr>
+                            <input type="hidden" name="{{ key }}" value="{{ value }}">
+                            <td>{{ key }}</td>
+                            <td>{{ value }}</td>
+                        </tr>
+                    {% endif %}
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <button onclick="onButtonClick('full')" type="submit">All Epochs</button>
+        <button onclick="onButtonClick('step')" type="submit">One Epoch</button>
+    </form>
+
+    {% if plot %}
+        <h2>Training Progress</h2>
+        <img src="{{ plot }}" alt="Training Progress Plot">
+    {% endif %}
+
+</body>
+</html>

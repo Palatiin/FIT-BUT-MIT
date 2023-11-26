@@ -11,7 +11,7 @@ import numpy as np
 
 class BaseFunction:
     def __init__(self, input_dim: int, output_dim: int):
-        np.random.seed(dt.datetime.now().timestamp())
+        np.random.seed(int(dt.datetime.now().timestamp()))
         # initialize weights in range [-0.5, 0.5]
         self.weight: np.ndarray = np.random.rand(input_dim, output_dim) - 0.5
         self.bias: np.ndarray = np.zeros(output_dim)
