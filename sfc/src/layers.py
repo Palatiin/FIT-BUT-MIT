@@ -12,6 +12,7 @@ from .functions import BaseFunction, ActivationFunction
 class Layer:
     def __init__(self, base: BaseFunction, activation: ActivationFunction):
         self.base: BaseFunction = base
+        self.base.init_weights(activation)
         self.activation: ActivationFunction = activation
 
     @property

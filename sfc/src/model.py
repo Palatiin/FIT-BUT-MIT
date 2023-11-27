@@ -19,6 +19,8 @@ class AutoencoderModel:
     neural network has two layers, and is trained by backpropagation algorithm.
     """
 
+    BATCH_SIZE = 100
+
     def __init__(self, layers: List[Layer], lr: float = 0.1):
         self.layers: List[Layer] = layers
         self.learning_rate: float = lr
@@ -62,7 +64,7 @@ class AutoencoderModel:
         self.layers[0].weights += self.learning_rate * np.dot(target.T, delta_hidden) / target.shape[0]
 
         # prepare for next epoch
-        self.error = []
+        # self.error = []
         self.hidden_output, self.output = [], []
 
     def train(
@@ -82,13 +84,22 @@ class AutoencoderModel:
                 self.error.append(self.loss(self.output[-1], test_data) / test_data.shape[0])
                 self.test_error_evolution.append(self.error[-1])
 
-            self.forward_pass(train_data)
-            self.error.append(self.loss(self.output[-1], train_data) / train_data.shape[0])
-            self.train_error_evolution.append(self.error[-1])
+            _error = 0.0
+            for batch_i in range(0, train_data.shape[0], self.BATCH_SIZE):
+                self.forward_pass(train_data[batch_i: batch_i + self.BATCH_SIZE])
+                _error += self.loss(
+                    self.output[-1], train_data[batch_i: batch_i + self.BATCH_SIZE]
+                ) / train_data.shape[0]
+                self.backward_pass(train_data[batch_i: batch_i + self.BATCH_SIZE])
 
-            print(f"Epoch: {epoch + 1} | Error: {self.error}")
+            # self.forward_pass(train_data)
+            # self.error.append(self.loss(self.output[-1], train_data) / train_data.shape[0])
+            self.train_error_evolution.append(_error)
 
-            self.backward_pass(train_data)
+            print(f"Epoch: {epoch + 1} | Error: {_error}, {self.error}")
+            self.error = []
+
+            # self.backward_pass(train_data)
 
         self.train_handle = None
 

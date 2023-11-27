@@ -31,9 +31,9 @@
     </script>
 </head>
 <body>
-    <h1>Autoencoder Neural Network Training</h1>
+    <h2>Autoencoder Neural Network Training</h2>
 
-    <h2>Configuration</h2>
+    <h3>Configuration</h3>
     <form id="trainForm" action="/train" method="post">
         <table>
             <thead>
@@ -59,7 +59,7 @@
         <button onclick="onButtonClick('step')" type="submit">One Epoch</button>
 
     {% if plot %}
-        <h2>Training Progress</h2>
+        <h3>Training Progress</h3>
         <img src="{{ plot }}" alt="Training Progress Plot">
     {% endif %}
 
@@ -68,8 +68,17 @@
         <input type="file" id="image" name="image" accept=".gif">
         <button onclick="onButtonClick('image')" type="submit">Feed Image</button>
         {% if img_nn %}
-            <h2>Image from the autoencoder</h2>
-            <img src="{{ img_nn }}" alt="Image">
+        <div style="display: flex; justify-content: space-between;">
+            <div style="flex: 1; margin-left: 2%">
+                <h3>Original image</h3>
+                <img src="{{ img_orig }}" alt="Image" width="400" height="300">
+            </div>
+
+            <div style="flex: 1; margin-left: -40%">
+                <h3>Image from the autoencoder</h3>
+                <img src="{{ img_nn }}" alt="Image" width="400" height="300">
+            </div>
+        </div>
         {% endif %}
     {% endif %}
     </form>

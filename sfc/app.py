@@ -108,9 +108,9 @@ def gif_to_numpy(file_path):
     return gif_array
 
 
-def plot_image(image: np.ndarray):
+def plot_image(image: np.ndarray, title: str):
     plt.imshow(image, cmap="gray")
-    plt.title('Recreated Image')
+    plt.title(title)
     img_bytes = io.BytesIO()
     plt.savefig(img_bytes, format='png')
     img_bytes.seek(0)
@@ -140,7 +140,7 @@ def train():
         load_dataset_and_prepare_for_training()
         return render_template("train.html", form_data=request.form.to_dict())
 
-    image_nn = None
+    image_nn, img_orig = None, None
     if request.form.get("action") == "step":
         model.next_epoch()
     elif request.form.get("action") == "full":
@@ -149,12 +149,19 @@ def train():
         image_in = gif_to_numpy(request.form.get("image"))
         output = model.forward_pass(image_in)
         output *= 255.0
-        image_nn = plot_image(output.reshape(28, 28))
+        img_orig = plot_image((image_in * 255.0).reshape(28, 28), title="Original Image")
+        image_nn = plot_image(output.reshape(28, 28), title="Recreated Image")
 
     plot = generate_plot()
     if plot:
         if image_nn:
-            return render_template("train.html", form_data=request.form.to_dict(), plot=plot, img_nn=image_nn)
+            return render_template(
+                "train.html",
+                form_data=request.form.to_dict(),
+                plot=plot,
+                img_orig=img_orig,
+                img_nn=image_nn,
+            )
         return render_template("train.html", form_data=request.form.to_dict(), plot=plot)
     return render_template("train.html", form_data=request.form.to_dict())
 

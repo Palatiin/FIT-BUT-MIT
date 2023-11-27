@@ -9,15 +9,41 @@ import datetime as dt
 import numpy as np
 
 
+class ActivationFunction:
+    @staticmethod
+    def forward(x: np.ndarray) -> np.ndarray:
+        raise NotImplementedError()
+
+    @staticmethod
+    def backward(x: np.ndarray) -> np.ndarray:
+        raise NotImplementedError()
+
+
 class BaseFunction:
     def __init__(self, input_dim: int, output_dim: int):
-        np.random.seed(int(dt.datetime.now().timestamp()))
-        # initialize weights in range [-0.5, 0.5]
-        self.weight: np.ndarray = np.random.rand(input_dim, output_dim) - 0.5
+        self.input_dim: int = input_dim
+        self.output_dim: int = output_dim
+        self.weight: np.ndarray = np.zeros((input_dim, output_dim))
         self.bias: np.ndarray = np.zeros(output_dim)
 
     def __call__(self, x: np.ndarray) -> np.ndarray:
         raise NotImplementedError()
+
+    def init_weights(self, activation: ActivationFunction):
+        # https://machinelearningmastery.com/weight-initialization-for-deep-learning-neural-networks/
+
+        np.random.seed(int(dt.datetime.now().timestamp()))
+        if activation.__class__.__name__ == "Sigmoid":
+            # normalized Xavier initialization
+            bound = np.sqrt(6.0) / np.sqrt(self.input_dim + self.output_dim)
+            bounds = (-bound, bound)
+            self.weight = np.random.rand(self.input_dim, self.output_dim) * (bounds[1] - bounds[0]) + bounds[0]
+        elif activation.__class__.__name__ == "ReLU":
+            # He initialization
+            std: float = np.sqrt(2.0 / self.input_dim)
+            self.weight = np.random.randn(self.input_dim, self.output_dim) * std
+        else:
+            self.weight = np.random.uniform(low=-0.5, high=0.5, size=(self.input_dim, self.output_dim))
 
 
 class Linear(BaseFunction):
@@ -27,16 +53,6 @@ class Linear(BaseFunction):
 
     def __call__(self, x: np.ndarray) -> np.ndarray:
         return np.dot(x, self.weight) + self.bias
-
-
-class ActivationFunction:
-    @staticmethod
-    def forward(x: np.ndarray) -> np.ndarray:
-        raise NotImplementedError()
-
-    @staticmethod
-    def backward(x: np.ndarray) -> np.ndarray:
-        raise NotImplementedError()
 
 
 class Sigmoid(ActivationFunction):

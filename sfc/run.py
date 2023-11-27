@@ -46,11 +46,11 @@ def plot(train_error: np.array, test_error: np.array, conf: Config):
 
 if __name__ == "__main__":
     config = Config(**{
-        "hidden_layer_size": 400,
+        "hidden_layer_size": 40,
         "hidden_layer_activation": ReLU(),
         "output_layer_activation": Sigmoid(),
         "epochs": 10,
-        "learning_rate": 0.8,
+        "learning_rate": 0.1,
     })
 
     # load data
