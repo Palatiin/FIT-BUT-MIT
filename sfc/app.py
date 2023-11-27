@@ -56,8 +56,8 @@ def load_dataset_and_prepare_for_training() -> None:
     global model
 
     # load data
-    train_data = np.loadtxt("data/mnist-tr.inp")
-    test_data = np.loadtxt("data/mnist-tk.inp")
+    train_data = np.loadtxt("mnist/mnist-tr.inp")
+    test_data = np.loadtxt("mnist/mnist-tk.inp")
 
     # normalize data and remove label (last column says which digit is on the image)
     train_data = train_data[:, :-1] / 255.0

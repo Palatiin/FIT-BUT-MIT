@@ -93,22 +93,21 @@ class AutoencoderModel:
             if test_data is not None:
                 # validate model
                 self.forward_pass(test_data)
-                self.error.append(self.loss(self.output[-1], test_data) / test_data.shape[0])
+                self.error.append(self.loss(self.output[-1], test_data))
                 self.test_error_evolution.append(self.error[-1])
 
+            # calculate error function of training data
+            error_func_sample = train_data[np.random.choice(train_data.shape[0], 5000, replace=False)]
+            self.error.append(self.loss(self.forward_pass(error_func_sample), error_func_sample))
+            self.train_error_evolution.append(self.error[-1])
+
             # train model
-            _error = 0.0
             for batch_i in range(0, train_data.shape[0], self.BATCH_SIZE):
                 # mini-batch gradient descent
                 self.forward_pass(train_data[batch_i: batch_i + self.BATCH_SIZE])
-                _error += self.loss(
-                    self.output[-1], train_data[batch_i: batch_i + self.BATCH_SIZE]
-                ) / train_data.shape[0]
                 self.backward_pass(train_data[batch_i: batch_i + self.BATCH_SIZE])
 
-            self.train_error_evolution.append(_error)
-
-            print(f"Epoch: {epoch + 1} | Error: {_error}, {self.error}")
+            print(f"Epoch: {epoch + 1} | Error: {self.error}")
             self.error = []
 
         self.train_handle = None
@@ -129,4 +128,4 @@ class AutoencoderModel:
     @staticmethod
     def loss(output: np.ndarray, target: np.ndarray) -> float:
         """Loss/Cost/Error function."""
-        return 0.5 * np.sum((target - output) ** 2)
+        return np.mean((target - output) ** 2)

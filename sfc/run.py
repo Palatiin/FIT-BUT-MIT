@@ -46,16 +46,16 @@ def plot(train_error: np.array, test_error: np.array, conf: Config):
 
 if __name__ == "__main__":
     config = Config(**{
-        "hidden_layer_size": 40,
+        "hidden_layer_size": 64,
         "hidden_layer_activation": ReLU(),
         "output_layer_activation": Sigmoid(),
-        "epochs": 10,
-        "learning_rate": 0.1,
+        "epochs": 5,
+        "learning_rate": 0.0003,
     })
 
     # load data
-    train_data = np.loadtxt("data/mnist-tr.inp")
-    test_data = np.loadtxt("data/mnist-tk.inp")
+    train_data = np.loadtxt("mnist/mnist-tr.inp")
+    test_data = np.loadtxt("mnist/mnist-tk.inp")
 
     # normalize data and remove label (last column says which digit is on the image)
     train_data = train_data[:, :-1] / 255.0
