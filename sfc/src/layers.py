@@ -10,6 +10,8 @@ from .functions import BaseFunction, ActivationFunction
 
 
 class Layer:
+    """Layer of neural network."""
+
     def __init__(self, base: BaseFunction, activation: ActivationFunction):
         self.base: BaseFunction = base
         self.base.init_weights(activation)
@@ -32,7 +34,15 @@ class Layer:
         self.base.bias = value
 
     def forward(self, x: np.ndarray) -> np.ndarray:
+        """Performs function: y = f(u(x))
+
+        * x - input
+        * y - output
+        * u - base function
+        * f - activation function
+        """
         return self.activation.forward(self.base(x))
 
     def backward(self, x: np.ndarray) -> np.ndarray:
+        """Derivative of activation function."""
         return self.activation.backward(x)

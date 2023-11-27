@@ -15,7 +15,7 @@ class AutoencoderModel:
     """Autoencoder Deep Neural Network Model
 
     Autoencoder is a type of neural network that is learned to represent identity.
-    This can be useful for pre-training of other deep neural networks. This autoencoder
+    This can be useful for pre-training of other deep neural networks. Autoencoder
     neural network has two layers, and is trained by backpropagation algorithm.
     """
 
@@ -45,13 +45,18 @@ class AutoencoderModel:
         return np.array(self.test_error_evolution)
 
     def forward_pass(self, x: np.ndarray) -> np.ndarray:
+        """Forward pass through the net."""
         self.hidden_output.append(self.layers[0].forward(x))
         self.output.append(self.layers[1].forward(self.hidden_output[-1]))
 
         return self.output[-1]
 
     def backward_pass(self, target: np.ndarray) -> None:
-        # partially inspired by: https://machinelearninggeek.com/backpropagation-neural-network-using-python/
+        """Gradient descent of backpropagation algorithm.
+
+        The method updates weights of the model.
+        Partially inspired by: https://machinelearninggeek.com/backpropagation-neural-network-using-python/
+        """
         # calculate weight deltas
         _error_output = target - self.output[-1]
         delta_output = _error_output * self.layers[1].backward(self.output[-1])
@@ -64,52 +69,59 @@ class AutoencoderModel:
         self.layers[0].weights += self.learning_rate * np.dot(target.T, delta_hidden) / target.shape[0]
 
         # prepare for next epoch
-        # self.error = []
         self.hidden_output, self.output = [], []
 
     def train(
         self, train_data: np.ndarray, test_data: Optional[np.ndarray] = None, epochs: Optional[int] = 20
     ) -> None:
+        """Initialize training of the model.
+
+        Minibatch gradient descent is used in backpropagation algorithm.
+        The method returns None, but initializes training handler which can be iterated
+        to train the model.
+        """
         self.train_handle = self._train(train_data, test_data, epochs)
 
     def _train(
         self, train_data: np.ndarray, test_data: Optional[np.ndarray] = None, epochs: Optional[int] = 20
     ) -> Optional[Generator]:
+        """Implementation of backpropagation algorithm - training of the net."""
         for epoch in range(epochs):
-            yield
+            yield  # allows training step by step
             np.random.shuffle(train_data)
 
             if test_data is not None:
+                # validate model
                 self.forward_pass(test_data)
                 self.error.append(self.loss(self.output[-1], test_data) / test_data.shape[0])
                 self.test_error_evolution.append(self.error[-1])
 
+            # train model
             _error = 0.0
             for batch_i in range(0, train_data.shape[0], self.BATCH_SIZE):
+                # mini-batch gradient descent
                 self.forward_pass(train_data[batch_i: batch_i + self.BATCH_SIZE])
                 _error += self.loss(
                     self.output[-1], train_data[batch_i: batch_i + self.BATCH_SIZE]
                 ) / train_data.shape[0]
                 self.backward_pass(train_data[batch_i: batch_i + self.BATCH_SIZE])
 
-            # self.forward_pass(train_data)
-            # self.error.append(self.loss(self.output[-1], train_data) / train_data.shape[0])
             self.train_error_evolution.append(_error)
 
             print(f"Epoch: {epoch + 1} | Error: {_error}, {self.error}")
             self.error = []
 
-            # self.backward_pass(train_data)
-
         self.train_handle = None
 
     def next_epoch(self):
+        """Train the model for one epoch - 'one step'."""
         try:
             self.train_handle.__iter__().__next__()
-        except Exception as e:
+        except Exception:
             ...
 
     def all_epochs(self):
+        """Train the model for all epochs - 'full'."""
         if self.train_handle:
             for _ in self.train_handle:
                 pass

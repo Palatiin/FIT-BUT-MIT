@@ -10,8 +10,10 @@ import numpy as np
 
 
 class ActivationFunction:
+    """Base class for activation functions."""
     @staticmethod
     def forward(x: np.ndarray) -> np.ndarray:
+        """Evaluate activation function."""
         raise NotImplementedError()
 
     @staticmethod
@@ -20,6 +22,7 @@ class ActivationFunction:
 
 
 class BaseFunction:
+    """Base class for base functions: Linear / Radial (not implemented)."""
     def __init__(self, input_dim: int, output_dim: int):
         self.input_dim: int = input_dim
         self.output_dim: int = output_dim
@@ -47,11 +50,12 @@ class BaseFunction:
 
 
 class Linear(BaseFunction):
+    """Linear base function: u = sum(w * x) + b"""
     def __init__(self, input_dim: int, output_dim: int):
         super().__init__(input_dim, output_dim)
-        self.y: float = 0.0
 
     def __call__(self, x: np.ndarray) -> np.ndarray:
+        """Evaluate base function."""
         return np.dot(x, self.weight) + self.bias
 
 

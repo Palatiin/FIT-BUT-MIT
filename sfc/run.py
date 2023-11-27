@@ -27,13 +27,13 @@ class Config:
 
 
 def min_max_normalization(arr: np.array, max_val: float) -> np.ndarray:
-    # min_val = np.min(arr)
+    # min = 0
     normalized_arr = arr / max_val
     return normalized_arr
 
 
 def plot(train_error: np.array, test_error: np.array, conf: Config):
-    # max_val = np.max(train_error) if test_error.size is None else np.max([np.max(train_error), np.max(test_error)])
+    # plot error function over epochs
     plt.plot(range(conf.epochs), train_error, label="Training data error")
     if test_error.size:
         plt.plot(range(conf.epochs), test_error, label="Test data error")
