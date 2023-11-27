@@ -96,7 +96,7 @@ def generate_plot():
 
 def gif_to_numpy(file_path):
     """Convert GIF image to numpy array."""
-    gif_reader = imageio.get_reader(os.path.join("data", "train", "00000-00999", file_path))
+    gif_reader = imageio.get_reader(os.path.join("mnist", "train", "00000-00999", file_path))
     frames = []
     for frame in gif_reader:
         frames.append(frame)
