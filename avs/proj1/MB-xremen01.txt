@@ -1,0 +1,33 @@
+#### Stručně odpovězte na následující otázky: ######
+
+
+1. Byla "Line" vektorizace časově efektivní? Proč?
+==============================================================================
+Ano, vypocet prebehol niekolkokrat rychlejsie oproti referencnemu rieseniu.
+Je tomu tak kvoli vyuzitiu SIMD - Single Instruction Multiple Data. Po vymene
+najhlbsej smycky sa vytvorila moznost spracovavat maticu po viacerych stlpcoch
+naraz v ramci jedneho riadkui a to zvysilo celkovu vykonnost algoritmu.
+
+
+2. Jaká byla dosažena výkonnost v Intel Advisoru pro jednotlivé implementace 
+(v GFLOPS)?
+==============================================================================
+Ref: 0.629 GFLOPS
+Line: 11.037 GFLOPS
+Batch: 21.162 GFLOPS
+
+
+3. Jaká část kódu byla vektorizována v "Line" implementaci? Vyčteme tuto 
+informaci i u batch kalkulátoru?
+==============================================================================
+Cast kodu, ktora sa nachadza v najvnorejsej smycke - floating point aritmetika.
+Rovnako to tak bolo aj u batch kalkulatoru.
+
+
+4. Co vyčteme z Roofline modelu pro obě vektorizované implementace?
+==============================================================================
+Roofline model vizualizuje vypoctovy vykon, a mozno vycitat z neho napriklad
+vyuzitie vektorizacie, zhodnotenie vykonu a optimalizacne moznosti.
+Line - obmedzenie vypocetnym vykonom a kapacitou pamati.
+Batch - obmedzenie vypocetnym vykonom
+
