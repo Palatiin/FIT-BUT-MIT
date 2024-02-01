@@ -1,0 +1,112 @@
+Architektury Výpočetních Systémů (AVS 2023)
+Projekt č. 2 (PMC)
+Login: xremen01
+
+Úloha 1: Paralelizace původního řešení
+===============================================================================
+
+1) Kterou ze smyček (viz zadání) je vhodnější paralelizovat a co způsobuje 
+   neefektivitu paralelizaci té druhé?
+   Vhodnejsie je paralelizovat prvu-vonkajsiu smycku (LoopMeshBuilder::marchCubes).
+   Paralelizovanie druhej-vnutornej smycky (LoopMeshBuilder::evaluateFieldAt) je
+   neefektivne kvoli vsokej rezii - priliz caste vytvaranie a rusenie mnozstva
+   vlakien.
+
+2) Jaké plánování (rozdělení práce mezi vlákna) jste zvolili a proč? 
+   Jaký vliv má velikost "chunk" při dynamickém plánování (8, 16, 32, 64)?
+	Zvolil som dynamicke planovanie s velkostou chunk(-u) 16, lebo tato
+	konfiguracia fungovala najlepsie.
+	Vacsi "chunk" ma mensiu reziu, ale aj mensie vyuzitie vlakien.
+
+3) Jakým způsobem zajišťujete ukládání trojúhelníků z několika vláken současně?
+	Oznacenim kritickej sekcie - #pragma omp critical - v metode emitTriangle
+	pred ukladanim trojuholniku do datovej struktury std::vector. Toto zabrani
+	pred zapisovanim dat z viacerych vlakien naraz.
+
+Úloha 2: Paralelní průchod stromem
+===============================================================================
+
+1) Stručně popište použití OpenMP tasků ve vašem řešení.
+	V TreeMeshBuilder::marchCubes som najprv pouzil #pragma omp parallel
+	a #pragma omp single nowait pred volanim metody TreeMeshBuilder::octree,
+	ktora vdaka tomu moze vytvarat paralelne tasky.
+
+	Nasledne, v metode TreeMeshBuilder::octree, kym aktualna dlzka hrany kocky
+	je vacsia ako prah (2.0f), vytvaram 8 taskov pomocou #pragma omp task,
+	ktore rekurzivne pocitaju octree pre mensie kocky v aktualnom podpriestore.
+	Paralelne tasky takto vytvaram, kym hrana kocky je dlhsia ako 2 (klauzula
+	if(gridSize > 2.0f) v pragme definujucej task), inak sa najmensie
+	podpriestory dopocitaju uz sekvencne.
+	Vystup kazdeho z tychto 8 taskov/volani metody ::octree za uklada zvlast
+	do premennych pomenovanych v abecednom poradi.
+
+	Na zaver, pouzitim #pragma omp taskwait cakam na dokoncenie vsetkych 8 taskov,
+	aby som ich vysledky mohol spocitat a ich sucet vratit ako vysledok volania
+	tejto metody. Pre ukladanie jednotlivych trojuholnikov do datovej struktury
+	std::vector, pouzivam #pragma omp critical rovnako ako v Ulohe c.1.
+
+2) Jaký vliv má na vaše řešení tzv. "cut-off"? Je vhodné vytvářet nový 
+   task pro každou krychli na nejnižší úrovni?
+	Cut-off mozno povazovat za optimalizacny prah. Urcuje najmensiu velkost
+	kocky (alebo hlbku zanorenia rekurzie), ktora uz nebude rozdelena na dalsich
+	8 podpriestorov. Cim vyssi je tento prah, tym je vykresleny model menej presny
+	a poskytuje aproximaciu. V mojom rieseni som zvolil cut-off podla najkratsej
+	dlzky hrany kocky = 1.
+
+	Na najnizsej urovni uz nie je vhodne vytvarat nove tasky, lebo dalsie
+	delenie uz nie je mozne a sekvencny vypocet prebehne rychlejsie - vytvaranie
+	taskov by zbytocne zvysovalo reziu, kedze staci uz len vratit vysledok metody
+	buildCube() (alebo 0 ak je kocka prazdna).
+
+3) Jakým způsobem zajišťujete ukládání trojúhelníků z několika vláken současně?
+	#pragma omp critical - pri zapise do datovej struktury std::vector, ktora
+	obsahuje trojuholniky - rovnako ako pri LoopMeshBuilder.
+
+
+Úloha 3: Grafy škálování všech řešení
+===============================================================================
+
+1) Stručně zhodnoťte efektivitu vytvořených řešení (na základě grafů ŠKÁLOVÁNÍ).
+	U Loop implementacie efektivita rastie po 16 vlakien, smerom k 32 vlaknam
+	efektivita uz klesa.
+
+	U Octree implementacie sa efektivita vypoctu medzi 8 a 16 vlaknami v priemere
+	uz velmi nezlepsuje a smerom k 32 vlaknam sa efektivita zhorsuje rovnako
+	ako u Loop implementacie.
+
+2) V jakém případě (v závislosti na počtu bodů ve vstupním souboru a velikosti 
+   mřížky) bude vaše řešení 1. úlohy neefektivní? (pokud takový případ existuje)
+	V pripade, ze sa pouziva vela vlakien na vypocet maleho vstupu.
+
+3) Je (nebo není) stromový algoritmus efektivnější z pohledu slabého škálování 
+   vzhledem ke vstupu?
+	Ano, je.
+
+4) Jaký je rozdíl mezi silným a slabým škálováním?
+	Silne skalovanie - velkost ulohy je konstantna. Cim viac jadier, tym by mala
+	byt kratsia doba vypoctu.
+
+	Slabe skalovanie - doba vypoctu je konstantna. Cim su ulohy vacsie a mame
+	k dispozicii vyssi pocet jadier, dobra vypoctu by mala byt rovnaka.
+
+Úloha 4: Analýza využití jader pomocí VTune
+================================================================================
+
+1) Jaké bylo průměrné využití jader pro všechny tři implementace s omezením na 
+   18 vláken? Na kolik procent byly využity?
+   
+   ref: 0.998, 2.8%
+   loop: 17.442, 48.5%
+   tree: 16.132, 44.8%
+
+2) Jaké bylo průměrné využití jader pro všechny tři implementace s využitím 
+   všech jader? Na kolik procent se podařilo využít obě CPU?
+   
+   ref: 0.998, 2.8%
+   loop: 32.865, 91.3%
+   tree: 26.859, 74.6%
+
+3) Jaké jsou závěry z těchto měření?
+	Referencne riesenie je najpomalsie a najmenej efektivne, lebo nevyuziva
+	paralelizaciu. Loop implementacia je najefektivnejsia.
+	
