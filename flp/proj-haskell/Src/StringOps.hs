@@ -11,6 +11,7 @@ module Src.StringOps
 
 import Data.Char (isSpace)
 
+
 -- remove whitespaces from both ends of string
 strip :: String -> String
 strip = str . str
@@ -27,4 +28,4 @@ split :: String -> Char -> [String]
 split "" _ = []
 split str delimiter =
   let (token, rest) = span (/= delimiter) str
-  in token : split ( dropWhile (== delimiter) (dropWhile (/= delimiter) str) ) delimiter
+  in token : split ( dropWhile (== delimiter) rest ) delimiter
