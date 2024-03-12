@@ -6,7 +6,7 @@ module Src.StringOps
   (
     strip
   , startsWith
-  , split
+  , splitBy
   ) where
 
 import Data.Char (isSpace)
@@ -24,8 +24,8 @@ startsWith [] _ = False
 startsWith (x : xs) (y : ys) = x == y && startsWith xs ys
 
 -- split String by Char delimiter
-split :: String -> Char -> [String]
-split "" _ = []
-split str delimiter =
+splitBy :: Char -> String -> [String]
+splitBy _ "" = []
+splitBy delimiter str =
   let (token, rest) = span (/= delimiter) str
-  in token : split ( dropWhile (== delimiter) rest ) delimiter
+  in token : splitBy delimiter ( dropWhile (== delimiter) rest )

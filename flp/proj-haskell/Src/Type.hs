@@ -6,10 +6,11 @@ module Src.Type
   (
     DTree(..)
   , readTree
+  , classify
   ) where
 
 import Data.Char (isSpace)
-import Src.StringOps (strip, startsWith, split)
+import Src.StringOps (strip, startsWith, splitBy)
 
 
 -- DT: feature index, threshold
@@ -37,9 +38,18 @@ readTree (line : rest)
   | otherwise = error line
   where
     sline = strip line
-    node_properties = split ( dropWhile isSpace $ drop (length "Node: ") sline ) ','
+    node_properties = splitBy ',' ( dropWhile isSpace $ drop (length "Node: ") sline )
     index = read $ node_properties !! 0
     threshold = read (strip $ node_properties !! 1)
     (left, restLeft) = if null rest then (EmptyDTree, []) else readTree rest
     (right, restTree) = if null restLeft then (EmptyDTree, []) else readTree restLeft
     cls = strip $ drop (length "Leaf: ") sline
+
+classify :: DTree -> [Float] -> String
+classify _ [] = ""              -- empty input
+classify EmptyDTree (_:_) = ""  -- empty tree
+classify (Leaf cls) _ = cls
+classify (Node index threshold left right) features
+  | (features !! index) < threshold = classify left features
+  | (features !! index) >= threshold = classify right features
+  | otherwise = error "Classify error!"

@@ -4,17 +4,19 @@
 
 import System.Environment (getArgs)
 
-import Src.Type (DTree(..), readTree)
+import Src.StringOps (splitBy)
+import Src.Type (readTree, classify)
 
 
 readAndClassify :: FilePath -> FilePath -> IO ()
 readAndClassify treePath dataPath = do
   treeData <- readFile treePath
   let tree = fst $ readTree . lines $ treeData
-  putStrLn $ show tree
+--  putStrLn $ show tree
 
-  --classifyData <- readFile dataPath
-  --classify . lines $ classifyData
+  classifyData <- readFile dataPath
+  let results = map (classify tree . map read . splitBy ',') (lines classifyData)
+  mapM_ putStrLn results
 
 trainDecisionTree :: FilePath -> IO () -- (DTree Int Float)
 trainDecisionTree trainingDataPath = do
