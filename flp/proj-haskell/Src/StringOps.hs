@@ -7,6 +7,7 @@ module Src.StringOps
     strip
   , startsWith
   , splitBy
+  , parseTrainingData
   ) where
 
 import Data.Char (isSpace)
@@ -29,3 +30,14 @@ splitBy _ "" = []
 splitBy delimiter str =
   let (token, rest) = span (/= delimiter) str
   in token : splitBy delimiter ( dropWhile (== delimiter) rest )
+
+-- parse columns of training data - the last column is string
+parseColumns :: [String] -> [Either Float String]
+parseColumns [] = []
+parseColumns [x] = [Right x]
+parseColumns (x : xs) = Left (read x) : parseColumns xs
+
+-- parse training data into matrix
+parseTrainingData :: [String] -> [[Either Float String]]
+parseTrainingData [] = []
+parseTrainingData (line : rest) = parseColumns (splitBy ',' line) : parseTrainingData rest

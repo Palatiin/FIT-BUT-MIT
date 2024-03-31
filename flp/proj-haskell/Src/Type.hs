@@ -13,8 +13,7 @@ import Data.Char (isSpace)
 import Src.StringOps (strip, startsWith, splitBy)
 
 
--- DT: feature index, threshold
---   Left Node, Right Node
+-- Decision Tree data type
 data DTree
   = EmptyDTree
   | Node Int Float DTree DTree
@@ -27,9 +26,10 @@ instance Show DTree where
       helper level (Leaf className) = replicate (2 * level) ' ' ++ "Leaf: " ++ className ++ "\n"
       helper level (Node index threshold left right) =
         replicate (2 * level) ' ' ++ "Node: " ++ show index ++ ", " ++ show threshold ++ "\n" ++
-        helper (level + 1) left ++
-        helper (level + 1) right
+        helper (level + 1) left ++  -- format left subtree
+        helper (level + 1) right    -- format right subtree
 
+-- parse tree from the input
 readTree :: [String] -> (DTree, [String])
 readTree [] = (EmptyDTree, [])
 readTree (line : rest)
@@ -45,6 +45,7 @@ readTree (line : rest)
     (right, restTree) = if null restLeft then (EmptyDTree, []) else readTree restLeft
     cls = strip $ drop (length "Leaf: ") sline
 
+-- classify input features using the decision tree
 classify :: DTree -> [Float] -> String
 classify _ [] = ""              -- empty input
 classify EmptyDTree (_:_) = ""  -- empty tree

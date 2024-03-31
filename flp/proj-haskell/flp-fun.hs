@@ -4,24 +4,32 @@
 
 import System.Environment (getArgs)
 
-import Src.StringOps (splitBy)
+import Src.CART (buildTree)
+import Src.StringOps (splitBy, parseTrainingData)
 import Src.Type (readTree, classify)
 
 
+-- Read tree from file, parse it into DTree, read input data from file,
+-- and perform inference using the tree.
 readAndClassify :: FilePath -> FilePath -> IO ()
 readAndClassify treePath dataPath = do
+  -- parse tree
   treeData <- readFile treePath
   let tree = fst $ readTree . lines $ treeData
---  putStrLn $ show tree
 
+  -- perform inference
   classifyData <- readFile dataPath
   let results = map (classify tree . map read . splitBy ',') (lines classifyData)
   mapM_ putStrLn results
 
+-- Read training data from file and train decision tree on it.
+-- The method is inspired by CART algorithm.
 trainDecisionTree :: FilePath -> IO () -- (DTree Int Float)
 trainDecisionTree trainingDataPath = do
+  -- parse training data
   trainingData <- readFile trainingDataPath
-  putStrLn trainingData
+  let matrix = parseTrainingData $ lines trainingData
+  putStrLn $ show $ buildTree matrix
 
 
 main :: IO ()
