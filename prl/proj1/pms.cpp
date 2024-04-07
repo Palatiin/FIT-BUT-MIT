@@ -6,6 +6,7 @@
 
 #include <iostream>
 #include <vector>
+#include <queue>
 #include <fstream>
 #include <cmath>  // <math.h>
 
@@ -19,9 +20,9 @@
 #define IS_WORKER (MASTER != rank)
 
 
-std::vector<uint8_t> read_input(const int rank){
+std::queue<uint8_t> read_input(const int rank){
     if (IS_WORKER){
-        return std::vector<uint8_t>();
+        return std::queue<uint8_t>();
     }
 
     // Open the file in binary read mode
@@ -31,12 +32,12 @@ std::vector<uint8_t> read_input(const int rank){
         MPI_Abort(MPI_COMM_WORLD, 1);
     }
 
-    std::vector<uint8_t> bytes;
+    std::queue<uint8_t> bytes;
     while (file) {
         char byte;
         file.read(&byte, NUMBER_BYTES);
         if (file.gcount() > 0) {
-            bytes.push_back(static_cast<uint8_t>(byte));
+            bytes.push(static_cast<uint8_t>(byte));
         }
     }
     file.close();
@@ -45,7 +46,7 @@ std::vector<uint8_t> read_input(const int rank){
 }
 
 
-int broadcast_input_size(const int rank, std::vector<uint8_t> &input_bytes){
+int broadcast_input_size(const int rank, std::queue<uint8_t> &input_bytes){
     u_long size;
 
     if (IS_MASTER) {
@@ -62,16 +63,19 @@ std::vector<uint8_t> pipeline_mergesort(
         const int rank,
         const int comm_size,
         int input_size,
-        std::vector<uint8_t> bytes
+        std::queue<uint8_t> bytes
 ){
+    std::vector<uint8_t> output;
     if (IS_MASTER) {
         // P_0
         uint8_t processed_byte;
         for (int message_tag = 0; message_tag < input_size; ++message_tag) {
-            processed_byte = bytes.back();
-            bytes.pop_back();
+            processed_byte = bytes.front();
+            std::cout << static_cast<unsigned int>(processed_byte) << " ";
+            bytes.pop();
             MPI_Send(&processed_byte, 1, MPI_UINT8_T, rank + 1, message_tag, MPI_COMM_WORLD);
         }
+        std::cout << std::endl;
     } else if (IS_WORKER) {
         // P_i (0 <= i < comm_size - 1)
         int q_cycle = (int)pow(2, rank-1);
@@ -81,7 +85,7 @@ std::vector<uint8_t> pipeline_mergesort(
         int rcv_tag = 0;
         int q1_seq = q_cycle;
         int q2_seq = q_cycle;
-        std::vector<std::vector<uint8_t> > queues(2);
+        std::vector<std::queue<uint8_t> > queues(2);
 
         for (int i = 0; i < input_size + q_cycle + 1; ++i) {
             // Receive, and store byte
@@ -91,7 +95,7 @@ std::vector<uint8_t> pipeline_mergesort(
                 rcv_tag++;
 
                 // Store received byte in the queue, and switch queues every cycle
-                queues[q_switch].insert(queues[q_switch].begin(), received_byte);
+                queues[q_switch].push(received_byte);
                 q_switch = ((i + 1) % q_cycle == 0) ? !q_switch : q_switch;
             }
 
@@ -105,21 +109,21 @@ std::vector<uint8_t> pipeline_mergesort(
                 bool can_use_q1 = q1_seq > 0 && q1_size > 0;
                 bool can_use_q2 = q2_seq > 0 && q2_size > 0;
                 if (can_use_q1 && !can_use_q2) {
-                    forward_byte = queues[0].back();
-                    queues[0].pop_back();
+                    forward_byte = queues[0].front();
+                    queues[0].pop();
                     q1_seq--;
                 } else if (!can_use_q1 && can_use_q2) {
-                    forward_byte = queues[1].back();
-                    queues[1].pop_back();
+                    forward_byte = queues[1].front();
+                    queues[1].pop();
                     q2_seq--;
                 } else if (can_use_q1 && can_use_q2) {
-                    if (queues[0].back() >= queues[1].back()) {
-                        forward_byte = queues[0].back();
-                        queues[0].pop_back();
+                    if (queues[0].front() >= queues[1].front()) {
+                        forward_byte = queues[0].front();
+                        queues[0].pop();
                         q1_seq--;
                     } else {
-                        forward_byte = queues[1].back();
-                        queues[1].pop_back();
+                        forward_byte = queues[1].front();
+                        queues[1].pop();
                         q2_seq--;
                     }
                 }
@@ -134,14 +138,14 @@ std::vector<uint8_t> pipeline_mergesort(
                     MPI_Send(&forward_byte, 1, MPI_UINT8_T, rank + 1, fwd_tag, MPI_COMM_WORLD);
                 } else {
                     // Store byte in the output queue
-                    bytes.insert(bytes.begin(), forward_byte);
+                    output.insert(output.begin(), forward_byte);
                 }
                 fwd_tag++;
             }
         }
     }
 
-    return bytes;
+    return output;
 }
 
 
@@ -154,14 +158,7 @@ int main(int argc, char **argv){
     MPI_Comm_size(MPI_COMM_WORLD, &comm_size);
 
     // Read input file (only in master process / P_0)
-    std::vector<uint8_t> input_bytes = read_input(rank);
-    // Print input numbers
-    if (IS_MASTER) {
-        for (uint i = 0; i < input_bytes.size(); ++i) {
-            std::cout << static_cast<unsigned int>(input_bytes[i]) << " ";
-        }
-        std::cout << std::endl;
-    }
+    std::queue<uint8_t> input_bytes = read_input(rank);
 
     // Broadcast input size, and initialize input queues in worker processes
     int input_size = broadcast_input_size(rank, input_bytes);
@@ -170,7 +167,7 @@ int main(int argc, char **argv){
     std::vector<uint8_t> sorted_bytes = pipeline_mergesort(rank, comm_size, input_size, input_bytes);
 
     if (rank == comm_size - 1){
-        for (uint i = 0; i < sorted_bytes.size(); ++i) {
+        for (u_long i = 0; i < sorted_bytes.size(); ++i) {
             std::cout << static_cast<unsigned int>(sorted_bytes[i]) << std::endl;
         }
     }
