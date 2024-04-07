@@ -21,22 +21,23 @@
 
 
 std::deque<uint8_t> read_input(const int rank){
+    std::deque<uint8_t> bytes;
     if (IS_WORKER){
-        return std::deque<uint8_t>();
+        return bytes;
     }
 
-    // Open the file in binary read mode
+    // Open the file in binary read mode.
     std::ifstream file(INPUT_FILE, std::ios::binary | std::ios::in);
     if (!file.is_open()) {
         std::cerr << "read_input.error: can't open input file" << std::endl;
         MPI_Abort(MPI_COMM_WORLD, 1);
     }
 
-    std::deque<uint8_t> bytes;
+    // Read bytes.
     while (file) {
         char byte;
         file.read(&byte, NUMBER_BYTES);
-        if (file.gcount() > 0) {
+        if (file.gcount() > 0) {  // to detect EOF
             bytes.push_back(static_cast<uint8_t>(byte));
         }
     }
@@ -52,7 +53,7 @@ int broadcast_input_size(const int rank, std::deque<uint8_t> &input_bytes){
     if (IS_MASTER) {
         size = input_bytes.size();
     }
-    // Broadcast input size from master to all other processes
+    // Broadcast input size from master to all other processes.
     MPI_Bcast(&size, 1, MPI_UNSIGNED_LONG, MASTER, MPI_COMM_WORLD);
 
     return static_cast<int>(size);
@@ -66,7 +67,7 @@ std::deque<uint8_t> pipeline_mergesort(
         std::deque<uint8_t> bytes
 ){
     if (IS_MASTER) {
-        // P_0
+        // P_0, send bytes to the next process.
         uint8_t processed_byte;
         for (int message_tag = 0; message_tag < input_size; ++message_tag) {
             processed_byte = bytes.front();
@@ -86,27 +87,30 @@ std::deque<uint8_t> pipeline_mergesort(
         int q2_seq = q_cycle;
         std::vector<std::deque<uint8_t> > queues(2);
 
+        // Process input bytes, and send bytes to the next process.
         for (int i = 0; i < input_size + q_cycle + 1; ++i) {
-            // Receive, and store byte
+            // Receive, and store byte to the queue according to the queue cycle.
+            // Queue cycle defines how many bytes are stored in the queue before switching to the other queue.
             if (i < input_size) {
                 uint8_t received_byte;
                 MPI_Recv(&received_byte, 1, MPI_UINT8_T, rank - 1, rcv_tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
                 rcv_tag++;
 
-                // Store received byte in the queue, and switch queues every cycle
+                // Store received byte at the end of the queue, and switch queues every cycle.
                 queues[q_switch].push_back(received_byte);
                 q_switch = ((i + 1) % q_cycle == 0) ? !q_switch : q_switch;
             }
 
-            // Send byte to the next process
+            // Select, and send byte to the next process.
             if (i > q_cycle) {
                 uint8_t forward_byte;
                 size_t q1_size = queues[0].size();
                 size_t q2_size = queues[1].size();
 
-                // Select byte to forward
+                // Consider current subsequence, and select byte to forward.
                 bool can_use_q1 = q1_seq > 0 && q1_size > 0;
                 bool can_use_q2 = q2_seq > 0 && q2_size > 0;
+
                 if (can_use_q1 && !can_use_q2) {
                     forward_byte = queues[0].front();
                     queues[0].pop_front();
@@ -116,6 +120,7 @@ std::deque<uint8_t> pipeline_mergesort(
                     queues[1].pop_front();
                     q2_seq--;
                 } else if (can_use_q1 && can_use_q2) {
+                    // Select the byte from the front of the queue with the higher value.
                     if (queues[0].front() >= queues[1].front()) {
                         forward_byte = queues[0].front();
                         queues[0].pop_front();
@@ -127,16 +132,17 @@ std::deque<uint8_t> pipeline_mergesort(
                     }
                 }
 
+                // Reinitialize queue select sequences/windows if all values from both were forwarded.
                 if (q1_seq == 0 && q2_seq == 0) {
                     q1_seq = q_cycle;
                     q2_seq = q_cycle;
                 }
 
                 if (!is_last_process) {
-                    // Send byte to the next process
+                    // Send byte to the next process.
                     MPI_Send(&forward_byte, 1, MPI_UINT8_T, rank + 1, fwd_tag, MPI_COMM_WORLD);
                 } else {
-                    // Store byte in the output queue
+                    // Store byte at the front of the output queue.
                     bytes.push_front(forward_byte);
                 }
                 fwd_tag++;
@@ -149,22 +155,36 @@ std::deque<uint8_t> pipeline_mergesort(
 
 
 int main(int argc, char **argv){
-    // Initialize execution environment, and
+    // Initialize execution environment, and get process rank and communicator size.
     MPI_Init(&argc, &argv);
     int rank, comm_size;
 
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &comm_size);
 
-    // Read input file (only in master process / P_0)
+    // Read input file (only in master process / P_0).
     std::deque<uint8_t> input_bytes = read_input(rank);
 
-    // Broadcast input size, and initialize input queues in worker processes
+    // Broadcast input size, and initialize input queues in worker processes.
     int input_size = broadcast_input_size(rank, input_bytes);
 
-    // Sort input numbers using pipeline mergesort
+    // If there is only one number, print it twice - as input and output - and end the program.
+    if (input_size == 1) {
+        if (IS_MASTER) {
+            // as input
+            std::cout << static_cast<unsigned int>(input_bytes.front()) << std::endl;
+            // as output
+            std::cout << static_cast<unsigned int>(input_bytes.front()) << std::endl;
+        }
+
+        MPI_Finalize();
+        return 0;
+    }
+
+    // Sort input numbers using pipeline mergesort.
     std::deque<uint8_t> sorted_bytes = pipeline_mergesort(rank, comm_size, input_size, input_bytes);
 
+    // Print sorted numbers in the last process.
     if (rank == comm_size - 1){
         for (; !sorted_bytes.empty(); sorted_bytes.pop_front()) {
             std::cout << static_cast<unsigned int>(sorted_bytes.front()) << std::endl;
