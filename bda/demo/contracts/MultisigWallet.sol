@@ -8,23 +8,25 @@ contract MultiSigWallet {
      */ 
 
     uint constant public MAX_OWNER_COUNT = 10;
-    string constant public XLOGIN = "xlogin00";
+    string constant public XLOGIN = "xremen01";
 
     event Confirmation(address indexed sender, uint indexed transactionId);
     event Submission(uint indexed transactionId);
     event Execution(uint indexed transactionId);
     event ExecutionFailure(uint indexed transactionId);
     event Deposit(address indexed sender, uint value);
+    event NotEnoughBalance(uint curBalance, uint requestedBalance);
 
     struct Transaction {
         address destination; // receiver of crypto-tokens (Ether) sent
         uint value; // amount to sent from contract
+        bool executed;
     }
 
     mapping (uint => Transaction) public transactions; // Mapping of Txn IDs to Transaction objects
     mapping (uint => mapping (address => bool)) public signatures; // Mapping of Txn IDs to owners who already signed them
     mapping (address => bool) public isOwner;
-    
+
     address[] public owners; // all possible signers of each transaction
     uint public minSignatures; // minimum number of signatures required for execution of each transaction
     uint public transactionCount; 
@@ -39,9 +41,14 @@ contract MultiSigWallet {
         //  1) the maximum number of owners, 
         //  2) whether required signatures is not 0 or higher than MAX_OWNER_COUNT 
         //  3) the number of owners is not 0
-        
-        if(_requiredSigs != 2 || ownerCount != 2){
-             revert("Validation of 2-of-2 multisig setting failed");
+        if(ownerCount > MAX_OWNER_COUNT || ownerCount == 0){
+            revert("Invalid number of owners.");
+        }
+        if(_requiredSigs > MAX_OWNER_COUNT || _requiredSigs == 0){
+            revert("Invalid number of required signatures.");
+        }
+        if(_requiredSigs > ownerCount){
+            revert("Required signatures are higher than the number of owners.");
         }
         _;
     }
@@ -71,6 +78,12 @@ contract MultiSigWallet {
     //     ... body ... 
     //     _;
     // }
+    modifier replayAttackProtection(uint txId) {
+        if (transactions[txId].executed == true) {
+            revert("Replay attack detected.");
+        }
+        _;
+    }
 
 
     /**
@@ -93,17 +106,14 @@ contract MultiSigWallet {
     {        
         // TASK 2: Modify this constructor to fit n-of-m scheme, i.e., an arbitrary number of owners and required signatures (max. is MAX_OWNER_COUNT)
         // do not allow repeating addresses or zero addresses to be passed in _owners
-        
-        checkNotNull(_owners[0]);
-        checkNotNull(_owners[1]);
-        
-        if(_owners[0] == _owners[1]){
-            revert("A repeated owner passed.");
+        for (uint i = 0; i < _owners.length; i++) {
+            checkNotNull(_owners[i]);
+            if (isOwner[_owners[i]]){
+                revert("A repeated owner passed.");
+            }
+            isOwner[_owners[i]] = true;
         }
 
-        // save owners (m) and the minimum number of signatures (n) to the storage variables of the contract
-        isOwner[_owners[0]] = true;
-        isOwner[_owners[1]] = true;        
         owners = _owners;
         minSignatures = _requiredSigs;
     }
@@ -135,15 +145,20 @@ contract MultiSigWallet {
 
     /// @dev Allows anyone to execute a confirmed transaction.
     /// @param transactionId Transaction ID.
-    function executeTransaction(uint transactionId) public                
+    function executeTransaction(uint transactionId) public replayAttackProtection(transactionId)
     {
         // TASK 3: check whether the contract has enough balance and if not emit a new event called NotEnoughBalance(curBalance, requestedBalance)
 
         if (isTxConfirmed(transactionId)) {
             Transaction storage txn = transactions[transactionId];          
 
-            if (payable(address(uint160(txn.destination))).send(txn.value)){ // sending the Ether to destination address
-                emit Execution(transactionId);              
+            uint contractBalance = address(this).balance;
+            if (contractBalance < txn.value) {
+                emit NotEnoughBalance(contractBalance, txn.value);
+            }
+            else if (payable(address(uint160(txn.destination))).send(txn.value)){ // sending the Ether to destination address
+                txn.executed = true;
+                emit Execution(transactionId);
             }
             else {
                 emit ExecutionFailure(transactionId);                
@@ -188,7 +203,8 @@ contract MultiSigWallet {
         transactionId = transactionCount;
         transactions[transactionId] = Transaction({
             destination: destination,
-            value: value
+            value: value,
+            executed: false
         });
         transactionCount += 1;
         emit Submission(transactionId);
@@ -224,9 +240,25 @@ contract MultiSigWallet {
     /// @dev Returns array with owners that confirmed a transaction.
     /// @param transactionId Transaction ID.
     /// @return Returns array of owner addresses.
-    // function getOwnersWhoSignedTx(uint transactionId)
-    //     ... modifiers / visibility specifiers...
-    // {
-    //     ... body ...
-    // }
+     function getOwnersWhoSignedTx(uint transactionId)
+         public view returns (address[] memory)
+     {
+         // Loop through all owners and check if they signed the transaction
+         address[] memory signedOwners = new address[](owners.length);
+         uint count = 0;
+         for (uint i = 0; i < owners.length; i++) {
+             if (signatures[transactionId][owners[i]]) {
+                 signedOwners[count] = owners[i];
+                 count++;
+             }
+         }
+
+         // Create a new array with the exact length
+         address[] memory result = new address[](count);
+         for (uint i = 0; i < count; i++) {
+             result[i] = signedOwners[i];
+         }
+
+         return result;
+     }
 }

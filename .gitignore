@@ -1,2 +1,8 @@
 __pycache__/
+build/
+node_modules/
+*.lock
+*-lock.json
 .idea/
+.secret
+.env
