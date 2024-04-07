@@ -15,8 +15,9 @@ module.exports = function(deployer, network, accounts) {
     if (network == "mainnet") {
         throw "Halt. Sanity check. Not ready for deployment to mainnet.";
     } else if (network == "sepolia" || network == "sepolia-fork") {
-        owners.push("0x07F065753F2137580619486D14f5c82FF9f84736")
-        owners.push("0xB098a974f390a5D66aC405B5058E05F41133a12A")
+        owners.push("0xA740d1c5eF3E61773293D5E8860Fb6575dF25E6d")
+        owners.push("0xB5902F7b07d5C8f992aBad01796483a67FAe8dDd")
+        owners.push("0xca8f65998258190ededda8a256a12688d7D911D2")
     } else { // development & test networks
         for (let i = 0; i < conf.NUMBER_OF_OWNERS; i++) {
             owners.push(accounts[i])
