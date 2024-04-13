@@ -46,6 +46,7 @@ std::vector<std::vector<char> > load_board(const int rank, const std::string &fi
 
 void broadcast_dimensions(
     const int rank,
+    int &size,
     const std::vector<std::vector<char> > &board,
     u_int &row_dim,
     u_int &col_dim
@@ -55,9 +56,15 @@ void broadcast_dimensions(
         if (row_dim > 0) {
             col_dim = board[0].size();
         }
+
+        if (size > row_dim) {
+            size = row_dim;
+        }
     }
     MPI_Bcast(&row_dim, 1, MPI_UNSIGNED, MASTER, MPI_COMM_WORLD);
     MPI_Bcast(&col_dim, 1, MPI_UNSIGNED, MASTER, MPI_COMM_WORLD);
+    // Broadcast the number of processes if there are more than needed.
+    MPI_Bcast(&size, 1, MPI_INT, MASTER, MPI_COMM_WORLD);
 }
 
 void share_board(
@@ -67,6 +74,10 @@ void share_board(
     const u_int col_dim,
     std::vector<std::vector<char> > &board
 ) {
+    if (rank >= size) {
+        row_dim = 0;
+        return;
+    }
     int rows_per_process = row_dim / size;
     int rows_remainder = row_dim % size;
     int current_rank_rows = rows_per_process;
@@ -161,6 +172,10 @@ void live(
     std::vector<std::vector<char> > &board,
     const u_int iteration
 ) {
+    if (row_dim == 0) {
+        return;
+    }
+
     // Communicate between neighboring processes.
     int prev_rank = IS_MASTER ? size - 1 : rank - 1;
     int next_rank = rank + 1 < size ? rank + 1 : MASTER;
@@ -220,14 +235,15 @@ int main(int argc, char **argv) {
     }
     u_int iterations = static_cast<u_int>(std::strtol(argv[2], nullptr, 10));
 
-    int rank, size;
+    int rank, orig_size;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    MPI_Comm_size(MPI_COMM_WORLD, &size);
+    MPI_Comm_size(MPI_COMM_WORLD, &orig_size);
+    int size = orig_size;
 
     // Load, and distribute the board.
     std::vector<std::vector<char> > board = load_board(rank, argv[1]);
     u_int row_dim, col_dim;
-    broadcast_dimensions(rank, board, row_dim, col_dim);
+    broadcast_dimensions(rank, size, board, row_dim, col_dim);
     share_board(rank, size, row_dim, col_dim, board);
 
     // Simulate the game of life.
@@ -235,7 +251,7 @@ int main(int argc, char **argv) {
         live(rank, size, row_dim, col_dim, board, i);
     }
 
-    print_board(rank, size, row_dim, col_dim, board);
+    print_board(rank, orig_size, row_dim, col_dim, board);
 
     MPI_Finalize();
     return 0;
