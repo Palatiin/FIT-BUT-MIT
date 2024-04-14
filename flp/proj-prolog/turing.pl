@@ -61,7 +61,7 @@ parse_input([H|_], Rules, Tape) :-
     parse_line(H, tape, Tape), Rules = [].
 
 % Turing machine.
-print_tape([], _, _, _) :- nl.
+print_tape([], _, _, _) :- nl, !.
 print_tape([H | T], State, Index, CurrIndex) :-
     Index == CurrIndex,
     format("~w~w", [State, H]),
@@ -112,7 +112,10 @@ machine_simulate(Tape, Rules, State, Index) :-
     Index >= 0,
     print_tape(Tape, State, Index, 0),
     nth0(Index, Tape, Symbol),
-    match_rule(State, Symbol, Rules, rule(State, Symbol, NextState, Action)),
+    (
+        match_rule(State, Symbol, Rules, rule(State, Symbol, NextState, Action))
+        ; halt
+    ),
     apply_rule(Tape, Index, Action, NextTape, NextIndex),
     machine_simulate(NextTape, Rules, NextState, NextIndex).
 machine_simulate(_, _, _, Index) :-
