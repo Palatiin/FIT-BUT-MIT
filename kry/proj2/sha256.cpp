@@ -51,7 +51,7 @@ MessageBlocks::~MessageBlocks() {
     }
 }
 
-void MessageBlocks::print_block() {
+void MessageBlocks::print_blocks() {
     for (uint32_t i = 0; i < length; i++) {
         std::bitset<BLOCK_PRINT_ROW_BITS> binary(data[i]);
         std::cout << binary << std::endl;
@@ -107,7 +107,7 @@ void SHA256::digest(MessageBlocks &blocks) {
     }
 }
 
-std::string SHA256::to_string() {
+std::string SHA256::hexdigest() {
     // Convert hash to string (hex).
     std::stringstream ss;
     for (uint32_t i = 0; i < 8; ++i) {

@@ -35,7 +35,7 @@ public:
     MessageBlocks(std::string message);
     ~MessageBlocks();
 
-    void print_block();
+    void print_blocks();
 
 protected:
     uint64_t size = BLOCK_SIZE;
@@ -51,7 +51,7 @@ public:
     ~SHA256();
 
     void digest(MessageBlocks &blocks);
-    std::string to_string();
+    std::string hexdigest();
 
 private:
     uint32_t hash[8];

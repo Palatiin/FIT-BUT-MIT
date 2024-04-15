@@ -80,11 +80,10 @@ std::string read_input() {
 void calculate_sha256() {
     std::string message = read_input();
     MessageBlocks blocks(message);
-//    blocks.print_block();
 
     SHA256 sha256;
     sha256.digest(blocks);
-    std::cout << sha256.to_string() << std::endl;
+    std::cout << sha256.hexdigest() << std::endl;
 }
 
 void calculate_mac(std::string key) {
@@ -93,7 +92,7 @@ void calculate_mac(std::string key) {
 
     SHA256 sha256;
     sha256.digest(blocks);
-    std::cout << sha256.to_string() << std::endl;
+    std::cout << sha256.hexdigest() << std::endl;
 }
 
 int verify_mac(std::string key, std::string mac) {
@@ -102,7 +101,7 @@ int verify_mac(std::string key, std::string mac) {
 
     SHA256 sha256;
     sha256.digest(blocks);
-    std::string calculated_mac = sha256.to_string();
+    std::string calculated_mac = sha256.hexdigest();
     if (calculated_mac == mac) {
         return 0;
     } else {
