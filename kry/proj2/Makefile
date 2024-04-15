@@ -1,12 +1,12 @@
 CXX=g++
-CXXFLAGS=-std=c++17 -Wall -Wextra -fsanitize=address -fsanitize=leak
+CXXFLAGS=-std=c++17 -Wall -Wextra#-g -fsanitize=address -fsanitize=leak
 
 .PHONY: pack clean
 
 PROG=kry
 
 all:
-	$(CXX) $(CXXFLAGS) -c $(PROG).cpp -o $(PROG)
+	$(CXX) $(CXXFLAGS) $(PROG).cpp -o $(PROG)
 
 clean:
 	rm $(PROG)
