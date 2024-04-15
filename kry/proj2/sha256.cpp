@@ -36,7 +36,8 @@ MessageBlocks::MessageBlocks(std::string message) {
     }
     shift = (4 - (message_length % 4 + 1)) * BYTE_BITS;
     word |= 0x80 << shift;
-    data[(message_length + 1) / 4] = word;
+    uint32_t last_index = message_length / 4;
+    data[last_index] = word;
     uint64_t message_bits = static_cast<uint64_t>(message_length) * BYTE_BITS;
     data[length - 2] = message_bits >> 32;
     data[length - 1] = message_bits & 0xFFFFFFFF;
