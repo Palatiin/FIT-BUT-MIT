@@ -27,21 +27,31 @@ void print_usage() {
     std::cout << "  -a MSG  Specify length extension of an input message.\n";
 }
 
+
+void calculate_sha256() {
+    std::string message;
+    int c;
+    while ((c=fgetc(stdin)) != EOF) {
+        message += (char)c;
+    }
+    MessageBlocks blocks(message);
+
+    SHA256 sha256;
+    sha256.digest(blocks);
+    std::cout << sha256.to_string() << std::endl;
+}
+
+
 int main(int argc, char **argv) {
     (void) argv;
     if (argc == 1) {
         print_usage();
         return ERROR_HELP;
     }
-    std::string message = "Hello world!";
-    MessageBlocks blocks(message);
-    blocks.print_block();
-
-    SHA256 sha256;
-    sha256.digest(blocks);
-    std::string hash_str = sha256.to_string();
-    std::cout << "Message:      " << message << std::endl;
-    std::cout << "SHA-256 hash: " << hash_str << std::endl;
+    if (argc == 2 && std::string(argv[1]) == "-c") {
+        calculate_sha256();
+        return 0;
+    }
 
     return 0;
 }
