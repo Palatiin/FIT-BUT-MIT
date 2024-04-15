@@ -5,11 +5,11 @@ CXXFLAGS=-std=c++17 -Wall -Wextra#-g -fsanitize=address -fsanitize=leak
 
 PROG=kry
 
-all:
-	$(CXX) $(CXXFLAGS) $(PROG).cpp -o $(PROG)
+all: sha256.o
+	$(CXX) $(CXXFLAGS) -o $(PROG) $(PROG).cpp sha256.o
 
 clean:
-	rm $(PROG)
+	rm $(PROG) *.o
 
 pack:
 	zip 231876.zip $(PROG).cpp Makefile README.md
