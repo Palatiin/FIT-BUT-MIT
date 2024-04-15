@@ -96,6 +96,20 @@ void calculate_mac(std::string key) {
     std::cout << sha256.to_string() << std::endl;
 }
 
+int verify_mac(std::string key, std::string mac) {
+    std::string message = read_input();
+    MessageBlocks blocks(key + message);
+
+    SHA256 sha256;
+    sha256.digest(blocks);
+    std::string calculated_mac = sha256.to_string();
+    if (calculated_mac == mac) {
+        return 0;
+    } else {
+        return 1;
+    }
+}
+
 int main(int argc, char **argv) {
     if (argc == 1) {
         print_usage();
@@ -144,7 +158,7 @@ int main(int argc, char **argv) {
     } else if (args.s) {
         calculate_mac(args.k);
     } else if (args.v) {
-//        verify_mac(args.k, args.m);
+        return verify_mac(args.k, args.m);
     } else if (args.e) {
 //        length_extension_attack(args.m, args.n, args.a);
     }
