@@ -106,7 +106,7 @@ machine_simulate(Tape, Rules, State, Index, Configs, ConfigSequence) :-
     machine_simulate(NextTape, Rules, NextState, NextIndex, NewConfigs, ConfigSequence).
 machine_simulate(_, _, _, Index, _, _) :-
     % Index out of bounds, abnormal halting of the Machine.
-    Index < 0.
+    Index < 0, halt(1).
 
 % Print tapes based on the given configuration. Includes the State non-terminal in the output.
 print_tape([], State, Index, CurrIndex) :-
