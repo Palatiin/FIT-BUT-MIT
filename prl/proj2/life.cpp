@@ -5,6 +5,8 @@
  *
  * Note from the assignment: Square grids with even number of rows&columns.
  * Note: Grid is not infinite.
+ * Note: Warp-around version of the algorithm.
+ * Note: The algorithm should be able to handle any size of the board.
  */
 
 #include <fstream>
@@ -19,6 +21,7 @@
 
 
 std::vector<std::vector<char> > load_board(const int rank, const std::string &filename) {
+    // Only master process reads the board from a file.
     std::vector<std::vector<char> > board;
     if (IS_WORKER) {
         return board;
@@ -51,12 +54,14 @@ void broadcast_dimensions(
     u_int &row_dim,
     u_int &col_dim
 ) {
+    // Let other processes know the dimensions of the board.
     if (IS_MASTER) {
         row_dim = board.size();
         if (row_dim > 0) {
             col_dim = board[0].size();
         }
 
+        // Redundant processes will be idle.
         if (size > row_dim) {
             size = row_dim;
         }
@@ -75,17 +80,21 @@ void share_board(
     std::vector<std::vector<char> > &board
 ) {
     if (rank >= size) {
+        // Redundant process.
         row_dim = 0;
         return;
     }
+
+    // Calculate the number of rows each process will get.
     int rows_per_process = row_dim / size;
     int rows_remainder = row_dim % size;
     int current_rank_rows = rows_per_process;
     if (rank < rows_remainder) {
-        // if there is some remainder first 'rows_remainder' processes will get one more row
+        // If there is some remainder first 'rows_remainder' processes will get one more row.
         current_rank_rows++;
     }
 
+    // Master redistributes the board among the processes.
     if (IS_MASTER) {
         // Send the board parts to the workers.
         int next_rank_row = current_rank_rows;
@@ -103,7 +112,7 @@ void share_board(
         // Truncate the master's board to contain only its tiles.
         board.resize(current_rank_rows);
     } else {
-        // Receive the board from the master.
+        // Receive the sub-board from the master.
         board.resize(current_rank_rows);
         for (unsigned int r = 0; r < current_rank_rows; ++r) {
             board[r].resize(col_dim);
@@ -120,8 +129,12 @@ void print_board(
     const u_int col_dim,
     const std::vector<std::vector<char> > &board
 ) {
+    // Each process prints its part of the board, in the right order.
     for (int current_rank = MASTER; current_rank < size; ++current_rank) {
-        if (size > 1) {MPI_Barrier(MPI_COMM_WORLD);}
+        if (size > 1) {
+            // Synchronize all the processes.
+            MPI_Barrier(MPI_COMM_WORLD);
+        }
         if (current_rank == rank) {
             for (int r = 0; r < row_dim; ++r) {
                 std::cout << rank << ": ";
@@ -172,6 +185,7 @@ void live(
     std::vector<std::vector<char> > &board,
     const u_int iteration
 ) {
+    // Perform one iteration of the game of life.
     if (row_dim == 0) {
         return;
     }
@@ -180,12 +194,13 @@ void live(
     int prev_rank = IS_MASTER ? size - 1 : rank - 1;
     int next_rank = rank + 1 < size ? rank + 1 : MASTER;
 
-    // Send.
+    // Send the first row to the previous process, and the last row to the next process.
     int message_send_tag = 10000 * iteration + 10 * rank;
     MPI_Send(board[0].data(), col_dim, MPI_CHAR, prev_rank, message_send_tag, MPI_COMM_WORLD);
     MPI_Send(board[row_dim - 1].data(), col_dim, MPI_CHAR, next_rank, message_send_tag + 1, MPI_COMM_WORLD);
 
-    // Receive.
+    // Receive the last row from the previous process (will be first row of the sub-board),
+    // and the first row from the next process (will be last row of the sub-board).
     std::vector<char> prev_row(col_dim);
     std::vector<char> next_row(col_dim);
     int message_tag_prev = 10000 * iteration + 10 * prev_rank;
@@ -198,24 +213,23 @@ void live(
     tmp_board.insert(tmp_board.begin(), prev_row);
     tmp_board.push_back(next_row);
 
-    // Apply rules.
+    // Count neighbours and store the count in the remaining bits of the 'char' data type.
     for (u_int r = 0; r < row_dim; ++r) {
         for (u_int c = 0; c < col_dim; ++c) {
             char neighbors = count_neighbours(tmp_board, row_dim, col_dim, r + 1, c);
             board[r][c] = (board[r][c] & 0x01) | (neighbors << 1);
         }
     }
+    // Apply rules.
     for (u_int r = 0; r < row_dim; ++r) {
         for (u_int c = 0; c < col_dim; ++c) {
             char cell = board[r][c];
-            if (cell & 0x01) {
-                // Alive.
+            if (cell & 0x01) {  // Alive cell.
                 if ((cell >> 1) < 2 || (cell >> 1 )> 3) {
                     // Die.
                     board[r][c] = 0;
                 }
-            } else {
-                // Dead.
+            } else {  // Dead cell.
                 if ((cell >> 1) == 3) {
                     // Live.
                     board[r][c] = 1;
@@ -240,9 +254,10 @@ int main(int argc, char **argv) {
     MPI_Comm_size(MPI_COMM_WORLD, &orig_size);
     int size = orig_size;
 
-    // Load, and distribute the board.
+    // Load the board.
     std::vector<std::vector<char> > board = load_board(rank, argv[1]);
     u_int row_dim, col_dim;
+    // Distribute the board among the processes.
     broadcast_dimensions(rank, size, board, row_dim, col_dim);
     share_board(rank, size, row_dim, col_dim, board);
 
