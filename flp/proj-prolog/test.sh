@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Author: Matus Remen (xremen01@stud.fit.vutbr.cz)
+# Usage: ./test.sh
+
 # Define the Prolog executable and the test directory
 PROLOG="./flp23-log"
 TEST_DIR="tests"
