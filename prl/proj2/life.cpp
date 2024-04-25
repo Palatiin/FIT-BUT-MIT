@@ -4,9 +4,12 @@
  * Date: 13.04.2024
  *
  * Note from the assignment: Square grids with even number of rows&columns.
- * Note: Grid is not infinite.
- * Note: Warp-around version of the algorithm.
- * Note: The algorithm should be able to handle any size of the board.
+ * Notes:
+ *  - Grid is not infinite.
+ *  - Warp-around version of the algorithm.
+ *  - The algorithm can handle any size of the board.
+ *  - The program can run with any number of processes (redundant will be idle).
+ *  - The board is distributed per rows among the processes.
  */
 
 #include <fstream>
@@ -136,6 +139,7 @@ void print_board(
             MPI_Barrier(MPI_COMM_WORLD);
         }
         if (current_rank == rank) {
+            // Print the board per row.
             for (int r = 0; r < row_dim; ++r) {
                 std::cout << rank << ": ";
                 for (int c = 0; c < col_dim; ++c) {
