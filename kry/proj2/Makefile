@@ -1,5 +1,5 @@
 CXX=g++
-CXXFLAGS=-std=c++17 -Wall -Wextra#-g -fsanitize=address -fsanitize=leak
+CXXFLAGS=-std=c++17 -Wall -Wextra -fsanitize=address -fsanitize=leak
 
 .PHONY: pack clean test
 
@@ -16,5 +16,5 @@ clean:
 	rm $(PROG) *.o
 
 pack:
-	zip 231876.zip $(PROG).cpp sha256.cpp sha256.hpp test.py Makefile README.md
+	zip 231876.zip $(PROG).cpp sha256.cpp sha256.hpp Makefile README.md
 
