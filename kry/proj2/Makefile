@@ -16,5 +16,5 @@ clean:
 	rm $(PROG) *.o
 
 pack:
-	zip 231876.zip $(PROG).cpp Makefile README.md
+	zip 231876.zip $(PROG).cpp sha256.cpp sha256.hpp test.py Makefile README.md
 

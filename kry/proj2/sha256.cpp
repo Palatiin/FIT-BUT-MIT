@@ -34,10 +34,13 @@ MessageBlocks::MessageBlocks(std::string message) {
             word = 0;
         }
     }
+    // Store the last word with appended 0x80.
     shift = (4 - (message_length % 4 + 1)) * BYTE_BITS;
     word |= 0x80 << shift;
     uint32_t last_index = message_length / 4;
     data[last_index] = word;
+
+    // Store the message length in bits at the end of the blocks.
     uint64_t message_bits = static_cast<uint64_t>(message_length) * BYTE_BITS;
     data[length - 2] = message_bits >> 32;
     data[length - 1] = message_bits & 0xFFFFFFFF;
@@ -51,7 +54,33 @@ MessageBlocks::~MessageBlocks() {
     }
 }
 
+void MessageBlocks::update_length(uint64_t new_size) {
+    // Update the message length - last two words of the blocks - for length extension attack.
+    data[length - 2] = new_size >> 32;
+    data[length - 1] = new_size & 0xFFFFFFFF;
+}
+
+void MessageBlocks::print_content_ext(uint64_t left_padding_length) {
+    // Print the content of the message blocks including the padding - for length extension attack.
+    uint64_t msg_length = (static_cast<uint64_t>(data[length - 2]) << 32) + data[length - 1];
+    msg_length /= BYTE_BITS;
+
+    // Skip the left padding - secret key placeholder.
+    for (uint64_t i = left_padding_length; i < size / BYTE_BITS; ++i) {
+        uint64_t word_i = i / 4;  // 4 bytes per word (uint32_t).
+        uint64_t shift = (3 - (i % 4)) * BYTE_BITS;
+        uint32_t byte = (data[word_i] >> shift) & 0xFF;
+        if (i >= msg_length) {
+            std::cout << "\\x" << std::hex << std::setfill('0') << std::setw(2) << byte;
+        } else {
+            std::cout << static_cast<char>(byte);
+        }
+    }
+}
+
 void MessageBlocks::print_blocks() {
+    // Print the content of the message blocks in binary.
+    // Useful just for debugging.
     for (uint32_t i = 0; i < length; i++) {
         std::bitset<BLOCK_PRINT_ROW_BITS> binary(data[i]);
         std::cout << binary << std::endl;
@@ -60,7 +89,7 @@ void MessageBlocks::print_blocks() {
 
 
 SHA256::SHA256() {
-    // Initialize hash values.
+    // Initialize hash values / inner state.
     hash[0] = 0x6a09e667;
     hash[1] = 0xbb67ae85;
     hash[2] = 0x3c6ef372;
@@ -72,6 +101,13 @@ SHA256::SHA256() {
 }
 
 SHA256::~SHA256() {}
+
+void SHA256::update_hash(std::string hash) {
+    // Update hash values / inner state.
+    for (uint32_t i = 0; i < 8; ++i) {
+        this->hash[i] = std::stoul(hash.substr(i * 8, 8), nullptr, 16);
+    }
+}
 
 void SHA256::digest(MessageBlocks &blocks) {
     // Actual SHA-256 algorithm.

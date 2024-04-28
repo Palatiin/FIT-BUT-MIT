@@ -53,32 +53,28 @@ class TestSHA256(unittest.TestCase):
         input_data = ""
         expected_result = hashlib.sha256(input_data.encode()).hexdigest()
         actual_result = self.run_sha256(input_data)
-        # print(actual_result + " =?= " + expected_result)
-        
+
         self.assertEqual(actual_result, expected_result)
 
     def test_simple_string(self):
         input_data = "heslo"
         expected_result = hashlib.sha256(input_data.encode()).hexdigest()
         actual_result = self.run_sha256(input_data)
-        # print(actual_result + " =?= " + expected_result)
-        
+
         self.assertEqual(actual_result, expected_result)
 
     def test_complex_string(self):
         input_data = "hello, world!"
         expected_result = hashlib.sha256(input_data.encode()).hexdigest()
         actual_result = self.run_sha256(input_data)
-        # print(actual_result + " =?= " + expected_result)
-        
+
         self.assertEqual(actual_result, expected_result)
     
     def test_heslozprava(self):
         input_data = "heslozprave"
         expected_result = hashlib.sha256(input_data.encode()).hexdigest()
         actual_result = self.run_sha256(input_data)
-        # print(actual_result + " =?= " + expected_result)
-        
+
         self.assertEqual(actual_result, expected_result)
 
     def test_long_string(self):
@@ -86,8 +82,7 @@ class TestSHA256(unittest.TestCase):
             input_data = file.read()
         expected_result = hashlib.sha256(input_data.encode()).hexdigest()
         actual_result = self.run_sha256(input_data)
-        # print(actual_result + " =?= " + expected_result)
-        
+
         self.assertEqual(actual_result, expected_result)
 
     def test_various_lengths(self):
@@ -128,12 +123,13 @@ class TestVOption(unittest.TestCase):
         self.assertEqual(returncode, 0)
 
     def test_various(self):
-        for i in range(33):
-            for j in range(33):
+        for i in range(33, 44):
+            for j in range(1, 33):
                 input_data = generate_random_string(i)
                 key = generate_random_string(j)
                 mac = hashlib.sha256((key + input_data).encode()).hexdigest()
-                output, returncode = self.run_program(["-v", "-k", key, "-m", mac], _input=input_data)
+                output, returncode = self.run_program(["-v", "-k", f"{key}", "-m", mac], _input=input_data)
+                self.assertEqual(returncode, 0)
 
 
 if __name__ == '__main__':

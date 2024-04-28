@@ -35,7 +35,11 @@ public:
     MessageBlocks(std::string message);
     ~MessageBlocks();
 
+    void update_length(uint64_t new_size);
+    void print_content_ext(uint64_t left_padding_length);
     void print_blocks();
+
+    uint64_t get_size() { return size; }
 
 protected:
     uint64_t size = BLOCK_SIZE;
@@ -50,6 +54,7 @@ public:
     SHA256();
     ~SHA256();
 
+    void update_hash(std::string hash);
     void digest(MessageBlocks &blocks);
     std::string hexdigest();
 
@@ -74,6 +79,7 @@ private:
         0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2,
     };
 
+    // SHA256 functions.
     uint32_t rotr(uint32_t x, uint32_t n);
     uint32_t ch(uint32_t x, uint32_t y, uint32_t z);
     uint32_t maj(uint32_t x, uint32_t y, uint32_t z);
