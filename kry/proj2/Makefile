@@ -1,5 +1,5 @@
 CXX=g++
-CXXFLAGS=-std=c++17 -Wall -Wextra -fsanitize=address -fsanitize=leak
+CXXFLAGS=-std=c++17 -Wall -Wextra # -fsanitize=address -fsanitize=leak
 
 .PHONY: pack clean test
 
