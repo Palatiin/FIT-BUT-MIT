@@ -2,7 +2,7 @@
 pragma solidity ^0.8.25;
 
 contract MultisigWallet {
-    string public constant XLOGIN = "xlogin00";
+    string public constant XLOGIN = "xremen01";
 
     event Confirmation(address indexed sender, uint indexed transactionId);
     event Submission(uint indexed transactionId);
@@ -14,11 +14,14 @@ contract MultisigWallet {
     struct Transaction {
         address destination; // receiver of crypto-tokens (ETH)
         uint value; // amount to sent from the Wallet (contract)
+        address sender; // sender of the transaction
+        uint nonce; // number used once - to prevent replay attacks
     }
 
     mapping(uint => Transaction) public transactions; // mapping of transaction IDs to Transaction objects
     mapping(uint => mapping(address => bool)) public signatures; // mapping of transaction IDs to owners who already signed them
     mapping(address => bool) public isOwner;
+    mapping(address => uint) public nonces; // mapping of addresses to their nonces
 
     address[] public owners; // all possible signers of each transaction
     uint public requiredSignatures; // minimum number of signatures required for execution of each transaction
@@ -69,10 +72,12 @@ contract MultisigWallet {
 
     // TASK 1: implement a modifier that will protect against replay attacks. Use it at the correct place.
 
-    // modifier ...(...) {
-    //     ...
-    //     _;
-    // }
+    modifier verifyTransactionNonce(uint transactionId) {
+        if (transactions[transactionId].nonce != nonces[transactions[transactionId].sender]) {
+            revert("Transaction nonce is invalid.");
+        }
+        _;
+    }
 
     // ======================================================
     // Public functions callable from outside of the contract
@@ -160,7 +165,7 @@ contract MultisigWallet {
 
     /// @dev Allows anyone to execute a confirmed transaction.
     /// @param transactionId Sequential ID of a transaction.
-    function executeTransaction(uint transactionId) public {
+    function executeTransaction(uint transactionId) public verifyTransactionNonce(transactionId){
         if (isTransactionConfirmed(transactionId)) {
             Transaction storage transaction = transactions[transactionId];
 
@@ -169,6 +174,7 @@ contract MultisigWallet {
             );
 
             if (success) {
+                nonces[transaction.sender] += 1;
                 emit Execution(transactionId);
             } else {
                 emit ExecutionFailure(transactionId);
@@ -201,7 +207,9 @@ contract MultisigWallet {
 
         transactions[transactionId] = Transaction({
             destination: destination,
-            value: value
+            value: value,
+            sender: msg.sender,
+            nonce: nonces[msg.sender]
         });
 
         transactionCount += 1;
