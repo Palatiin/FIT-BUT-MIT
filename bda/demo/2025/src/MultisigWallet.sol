@@ -38,8 +38,8 @@ contract MultisigWallet {
     //     2. the number of required signatures is not more than the number of owners
 
     modifier checkValidSettings(uint ownerCount, uint requiredSigs) {
-        if (requiredSigs != 2 || ownerCount != 2) {
-            revert("Validation of 2-of-2 multisig setting failed");
+        if (requiredSigs < 2 || ownerCount < requiredSigs) {
+            revert("Validation of n-of-m multisig setting failed");
         }
         _;
     }
@@ -101,16 +101,15 @@ contract MultisigWallet {
         // TASK 2: Modify this constructor to fit n-of-m scheme, i.e., an arbitrary number of owners and required signatures
         // do not allow repeating addresses or zero addresses to be passed as an owner
 
-        checkNotNull(_owners[0]);
-        checkNotNull(_owners[1]);
-
-        if (_owners[0] == _owners[1]) {
-            revert("A repeated owner passed.");
+        for (uint i = 0; i < _owners.length; i++) {
+            checkNotNull(_owners[i]);
+            if (isOwner[_owners[i]]) {
+                revert("A repeated owner passed.");
+            }
+            isOwner[_owners[i]] = true;
         }
 
         // save owners (m) and the minimum number of signatures (n) to the storage variables of the contract
-        isOwner[_owners[0]] = true;
-        isOwner[_owners[1]] = true;
         owners = _owners;
         requiredSignatures = _requiredSigs;
     }
