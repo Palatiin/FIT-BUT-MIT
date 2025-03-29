@@ -256,6 +256,18 @@ contract MultisigWallet {
     function getOwnersWhoSignedTx(
         uint transactionId
     ) public view returns (address[] memory signedOwners) {
-
+        signedOwners = new address[](owners.length);
+        uint count = 0;
+        for (uint i = 0; i < owners.length; i++) {
+            if (signatures[transactionId][owners[i]]) {
+                signedOwners[count] = owners[i];
+                count++;
+            }
+        }
+        // resize the array to the actual number of signed owners
+        assembly {
+            mstore(signedOwners, count)
+        }
+        return signedOwners;
     }
 }
