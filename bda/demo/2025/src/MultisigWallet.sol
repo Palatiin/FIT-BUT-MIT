@@ -168,6 +168,12 @@ contract MultisigWallet {
         if (isTransactionConfirmed(transactionId)) {
             Transaction storage transaction = transactions[transactionId];
 
+            // check if the contract has enough balance
+            uint256 currentBalance = address(this).balance;
+            if (currentBalance < transaction.value) {
+                emit NotEnoughBalance(currentBalance, transaction.value);
+            }
+
             bool success = payable(address(uint160(transaction.destination))).send(
                 transaction.value
             );
