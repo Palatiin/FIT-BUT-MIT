@@ -16,17 +16,76 @@ contract TokenTest is Test {
 
         for (uint i = 1; i < 5; i++) {
             addresses.push(vm.addr(i));
+            // console.log("Address", addresses[i-1]);
         }
 
         address[] memory mintingAdmins = new address[](2);
         mintingAdmins[0] = addresses[0];
         mintingAdmins[1] = addresses[1];
 
-        token = new Token(_maxSupply, mintingAdmins, _maxDailyMint);
+        address[] memory trustedIDPs = new address[](1);
+        // Private key of the example IDP: 0x91e90072b136abfd4dec60420a22e330d5374519bda867c0406fdd650589201f
+        trustedIDPs[0] = address(0x67d3D8dbD7CDddf3C70Cf93F2152a2BbF6Be7557);
+
+        token = new Token(_maxSupply, mintingAdmins, _maxDailyMint, trustedIDPs);
+    }
+
+    function verifyFirstThreeAddresses() public {
+        vm.prank(addresses[0]);
+        token.verifyIdentity(1744451468, hex"778d70ce55da76bc4a8c05e13c6c6a2a0c300acb3e9e9b19cd049feab835f7b0704d0fad4b534f28902aa504226dd0eec7643a4da3c61b3b77c2375c2a66f83a1b");
+
+        vm.prank(addresses[1]);
+        token.verifyIdentity(1744451468, hex"f4ba43a5856dd02d60fdd17a1604d0e3ed4ace742b16107d612c9652fb9520a9168df8a74215e9ca4413d52fd64e81f9a725692dd55f82a6c54096ce982e2a781b");
+        
+        vm.prank(addresses[2]);
+        token.verifyIdentity(1744451468, hex"f748577b7f5f01ed0d840b7b56902a2b2a899608c6f8aaef7d23be633141d7ad3ac8c3df1c06d2554b673909b0bf264f5b96b5ed62ff8c4601b0b498a30199651c");
+    }
+
+    function test_verify_identity() public {
+        initToken(1000, 100);
+
+        // Verify 1. address
+        vm.expectEmit();
+        emit Token.IdentityVerified(addresses[0], 1744451468);
+        vm.prank(addresses[0]);
+        token.verifyIdentity(1744451468, hex"778d70ce55da76bc4a8c05e13c6c6a2a0c300acb3e9e9b19cd049feab835f7b0704d0fad4b534f28902aa504226dd0eec7643a4da3c61b3b77c2375c2a66f83a1b");
+        console.log("Address", addresses[0], "verified");
+
+        // Verify 2. address
+        vm.expectEmit();
+        emit Token.IdentityVerified(addresses[1], 1744451468);
+        vm.prank(addresses[1]);
+        token.verifyIdentity(1744451468, hex"f4ba43a5856dd02d60fdd17a1604d0e3ed4ace742b16107d612c9652fb9520a9168df8a74215e9ca4413d52fd64e81f9a725692dd55f82a6c54096ce982e2a781b");
+        console.log("Address", addresses[1], "verified");
+
+        // Verify 3. address
+        vm.expectEmit();
+        emit Token.IdentityVerified(addresses[2], 1744451468);
+        vm.prank(addresses[2]);
+        token.verifyIdentity(1744451468, hex"f748577b7f5f01ed0d840b7b56902a2b2a899608c6f8aaef7d23be633141d7ad3ac8c3df1c06d2554b673909b0bf264f5b96b5ed62ff8c4601b0b498a30199651c");
+        console.log("Address", addresses[2], "verified");
+
+        // Verify 3. address again
+        vm.expectRevert("Identity already verified");
+        vm.prank(addresses[2]);
+        token.verifyIdentity(1744451468, hex"f748577b7f5f01ed0d840b7b56902a2b2a899608c6f8aaef7d23be633141d7ad3ac8c3df1c06d2554b673909b0bf264f5b96b5ed62ff8c4601b0b498a30199651c");
+
+        
+    }
+
+    function test_mint_to_unverified_address() public {
+        initToken(1000, 100);
+        verifyFirstThreeAddresses();
+        assertEq(token.totalSupply(), 0, "Total supply should be 0");
+
+        vm.expectRevert("User is not verified");
+        vm.prank(addresses[0]);
+        token.mint(addresses[3], 10);
     }
 
     function test_mint_admin() public {
         initToken(1000, 100);
+        verifyFirstThreeAddresses();
         assertEq(token.totalSupply(), 0, "Total supply should be 0");
 
         // Test minting 10 tokens
@@ -43,6 +102,7 @@ contract TokenTest is Test {
 
     function test_mint_over_total_supply() public {
         initToken(100, 200);
+        verifyFirstThreeAddresses();
         assertEq(token.totalSupply(), 0, "Total supply should be 0");
 
         vm.expectRevert("Max supply exceeded");
@@ -52,6 +112,7 @@ contract TokenTest is Test {
 
     function test_mint_daily_limit() public {
         initToken(1000, 100);
+        verifyFirstThreeAddresses();
         assertEq(token.totalSupply(), 0, "Total supply should be 0");
 
         // Test minting 100 tokens

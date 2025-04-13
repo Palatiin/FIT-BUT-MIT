@@ -1,0 +1,20 @@
+[
+  {
+    "userAddress": "0x7E5F4552091A69125d5DfCb7b8C2659029395Bdf",
+    "timestamp": 1744451468,
+    "signature": "0x778d70ce55da76bc4a8c05e13c6c6a2a0c300acb3e9e9b19cd049feab835f7b0704d0fad4b534f28902aa504226dd0eec7643a4da3c61b3b77c2375c2a66f83a1b",
+    "message": "User with address 0x7E5F4552091A69125d5DfCb7b8C2659029395Bdf has verified their identity at 1744451468"
+  },
+  {
+    "userAddress": "0x2B5AD5c4795c026514f8317c7a215E218DcCD6cF",
+    "timestamp": 1744451468,
+    "signature": "0xf4ba43a5856dd02d60fdd17a1604d0e3ed4ace742b16107d612c9652fb9520a9168df8a74215e9ca4413d52fd64e81f9a725692dd55f82a6c54096ce982e2a781b",
+    "message": "User with address 0x2B5AD5c4795c026514f8317c7a215E218DcCD6cF has verified their identity at 1744451468"
+  },
+  {
+    "userAddress": "0x6813Eb9362372EEF6200f3b1dbC3f819671cBA69",
+    "timestamp": 1744451468,
+    "signature": "0xf748577b7f5f01ed0d840b7b56902a2b2a899608c6f8aaef7d23be633141d7ad3ac8c3df1c06d2554b673909b0bf264f5b96b5ed62ff8c4601b0b498a30199651c",
+    "message": "User with address 0x6813Eb9362372EEF6200f3b1dbC3f819671cBA69 has verified their identity at 1744451468"
+  }
+]
