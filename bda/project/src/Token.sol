@@ -13,6 +13,7 @@ contract Token is ERC20 {
     mapping(address => bool) public isTrustedIDP;
 
     mapping(address => bool) private isMintingAdmin;
+    mapping(address => bool) private isIDPAdmin;
     mapping(address => bool) private userVerificationStatus;
 
     event IdentityVerified(address indexed user, uint256 timestamp);
@@ -21,6 +22,7 @@ contract Token is ERC20 {
      * T1.1: extend ERC20 constructor to initialize MAX_SUPPLY 
      * T1.2: mintingAdmin role, maxDailyMint
      * T1.4: trustedIdentityProviders
+     * T1.5: idpAdmin role
      * @param _maxSupply: maximum supply of the token
      * @param _mintingAdmins: array of addresses that are minting admins
      * @param _maxDailyMint: maximum amount of tokens that can be minted in a day
@@ -29,7 +31,8 @@ contract Token is ERC20 {
         uint256 _maxSupply,
         address[] memory _mintingAdmins,
         uint256 _maxDailyMint,
-        address[] memory _trustedIdentityProviders
+        address[] memory _trustedIdentityProviders,
+        address[] memory _idpAdmins
     ) ERC20("Token", "TKN")
     {
         MAX_SUPPLY = _maxSupply;
@@ -41,6 +44,10 @@ contract Token is ERC20 {
         for (uint i = 0; i < _trustedIdentityProviders.length; i++) {
             checkNotNull(_trustedIdentityProviders[i]);
             isTrustedIDP[_trustedIdentityProviders[i]] = true;
+        }
+        for (uint i = 0; i < _idpAdmins.length; i++) {
+            checkNotNull(_idpAdmins[i]);
+            isIDPAdmin[_idpAdmins[i]] = true;
         }
     }
 
@@ -78,6 +85,22 @@ contract Token is ERC20 {
         userVerificationStatus[_msgSender()] = true;
         
         emit IdentityVerified(_msgSender(), timestamp);
+    }
+
+    /**
+     * T1.5
+     * @param _idp: address of the IDP to add
+     */
+    function addTrustedIDP(address _idp) public onlyIDPAdmin {
+        isTrustedIDP[_idp] = true;
+    }
+
+    /**
+     * T1.5
+     * @param _idp: address of the IDP to remove
+     */
+    function removeTrustedIDP(address _idp) public onlyIDPAdmin {
+        isTrustedIDP[_idp] = false;
     }
 
     // ===== View Functions =====
@@ -139,6 +162,11 @@ contract Token is ERC20 {
     // ===== Modifiers =====
     modifier onlyMintingAdmin() {
         require(isMintingAdmin[_msgSender()], "Not a minting admin");
+        _;
+    }
+
+    modifier onlyIDPAdmin() {
+        require(isIDPAdmin[_msgSender()], "Not an IDP admin");
         _;
     }
 

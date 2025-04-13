@@ -27,7 +27,10 @@ contract TokenTest is Test {
         // Private key of the example IDP: 0x91e90072b136abfd4dec60420a22e330d5374519bda867c0406fdd650589201f
         trustedIDPs[0] = address(0x67d3D8dbD7CDddf3C70Cf93F2152a2BbF6Be7557);
 
-        token = new Token(_maxSupply, mintingAdmins, _maxDailyMint, trustedIDPs);
+        address[] memory idpAdmins = new address[](1);
+        idpAdmins[0] = addresses[0];
+
+        token = new Token(_maxSupply, mintingAdmins, _maxDailyMint, trustedIDPs, idpAdmins);
     }
 
     function verifyFirstThreeAddresses() public {
@@ -72,6 +75,26 @@ contract TokenTest is Test {
 
         
     }
+
+    function test_add_trusted_idp() public {
+        initToken(1000, 100);
+        verifyFirstThreeAddresses();
+        assertEq(token.totalSupply(), 0, "Total supply should be 0");
+
+        vm.prank(addresses[0]);
+        // Private key of the example IDP: 0x19cfa6079c94c889a2b68223ec9a2e4170b7c977db7319c0e2cc7f82040297eb
+        token.addTrustedIDP(address(0x3f176887Ac19bbCcA11052E79BcF1533BD7CFFf9));
+        assertEq(token.isTrustedIDP(address(0x3f176887Ac19bbCcA11052E79BcF1533BD7CFFf9)), true, "IDP should be trusted");
+
+        vm.expectRevert("Not an IDP admin");
+        vm.prank(addresses[1]);
+        token.addTrustedIDP(address(0x3f176887Ac19bbCcA11052E79BcF1533BD7CFFf9));
+
+        vm.prank(addresses[0]);
+        token.removeTrustedIDP(address(0x3f176887Ac19bbCcA11052E79BcF1533BD7CFFf9));
+        assertEq(token.isTrustedIDP(address(0x3f176887Ac19bbCcA11052E79BcF1533BD7CFFf9)), false, "IDP should not be trusted");
+    }
+    
 
     function test_mint_to_unverified_address() public {
         initToken(1000, 100);
