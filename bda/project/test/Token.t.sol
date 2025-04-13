@@ -81,6 +81,8 @@ contract TokenTest is Test {
         verifyFirstThreeAddresses();
         assertEq(token.totalSupply(), 0, "Total supply should be 0");
 
+        vm.expectEmit();
+        emit Token.TrustedIDPAdded(address(0x3f176887Ac19bbCcA11052E79BcF1533BD7CFFf9));
         vm.prank(addresses[0]);
         // Private key of the example IDP: 0x19cfa6079c94c889a2b68223ec9a2e4170b7c977db7319c0e2cc7f82040297eb
         token.addTrustedIDP(address(0x3f176887Ac19bbCcA11052E79BcF1533BD7CFFf9));
@@ -90,6 +92,8 @@ contract TokenTest is Test {
         vm.prank(addresses[1]);
         token.addTrustedIDP(address(0x3f176887Ac19bbCcA11052E79BcF1533BD7CFFf9));
 
+        vm.expectEmit();
+        emit Token.TrustedIDPRemoved(address(0x3f176887Ac19bbCcA11052E79BcF1533BD7CFFf9));
         vm.prank(addresses[0]);
         token.removeTrustedIDP(address(0x3f176887Ac19bbCcA11052E79BcF1533BD7CFFf9));
         assertEq(token.isTrustedIDP(address(0x3f176887Ac19bbCcA11052E79BcF1533BD7CFFf9)), false, "IDP should not be trusted");
@@ -112,6 +116,8 @@ contract TokenTest is Test {
         assertEq(token.totalSupply(), 0, "Total supply should be 0");
 
         // Test minting 10 tokens
+        vm.expectEmit();
+        emit Token.TokensMinted(addresses[0], addresses[2], 10);
         vm.prank(addresses[0]);
         token.mint(addresses[2], 10);
         assertEq(token.totalSupply(), 10, "Total supply should be 10");
@@ -139,6 +145,8 @@ contract TokenTest is Test {
         assertEq(token.totalSupply(), 0, "Total supply should be 0");
 
         // Test minting 100 tokens
+        vm.expectEmit();
+        emit Token.TokensMinted(addresses[0], addresses[2], 100);
         vm.prank(addresses[0]);
         token.mint(addresses[2], 100);
         assertEq(token.totalSupply(), 100, "Total supply should be 100");
@@ -151,9 +159,39 @@ contract TokenTest is Test {
 
         // Test daily mint limit reset
         vm.warp(block.timestamp + 1 days);
+        vm.expectEmit();
+        emit Token.TokensMinted(addresses[0], addresses[2], 100);
         vm.prank(addresses[0]);
         token.mint(addresses[2], 100);
         assertEq(token.totalSupply(), 200, "Total supply should be 200");
         assertEq(token.balanceOf(addresses[2]), 200, "Balance of 2 should be 200");
+    }
+
+    function test_transfer() public {
+        initToken(1000, 100);
+        verifyFirstThreeAddresses();
+        assertEq(token.totalSupply(), 0, "Total supply should be 0");
+
+        // First, mint 10 tokens to address 2
+        vm.expectEmit();
+        emit Token.TokensMinted(addresses[0], addresses[2], 10);
+        vm.prank(addresses[0]);
+        token.mint(addresses[2], 10);
+
+        // Then, transfer 10 tokens from address 2 to address 1
+        vm.expectEmit();
+        emit Token.TokensTransferred(addresses[2], addresses[1], 10);
+        vm.prank(addresses[2]);
+        bool success = token.transfer(addresses[1], 10);
+        assertTrue(success, "Transfer should succeed");
+
+        // Verify the transfer
+        assertEq(token.balanceOf(addresses[2]), 0, "Balance of 2 should be 0");
+        assertEq(token.balanceOf(addresses[1]), 10, "Balance of 1 should be 10");
+
+        // Test non-verified address cannot receive tokens
+        vm.expectRevert("User is not verified");
+        vm.prank(addresses[1]);
+        token.transfer(addresses[3], 10);
     }
 }

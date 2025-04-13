@@ -17,6 +17,10 @@ contract Token is ERC20 {
     mapping(address => bool) private userVerificationStatus;
 
     event IdentityVerified(address indexed user, uint256 timestamp);
+    event TokensMinted(address indexed minter, address indexed to, uint256 amount);
+    event TokensTransferred(address indexed from, address indexed to, uint256 amount);
+    event TrustedIDPAdded(address indexed idp);
+    event TrustedIDPRemoved(address indexed idp);
 
     /**
      * T1.1: extend ERC20 constructor to initialize MAX_SUPPLY 
@@ -61,6 +65,22 @@ contract Token is ERC20 {
 
         _mint(to, amount);
         dailyMinted += amount;
+        emit TokensMinted(_msgSender(), to, amount);
+    }
+
+    /**
+     * @dev See {IERC20-transfer}.
+     *
+     * Requirements:
+     *
+     * - `to` cannot be the zero address.
+     * - the caller must have a balance of at least `value`.
+     */
+    function transfer(address to, uint256 value) public override isVerified(_msgSender()) isVerified(to) returns (bool) {
+        address owner = _msgSender();
+        _transfer(owner, to, value);
+        emit TokensTransferred(owner, to, value);
+        return true;
     }
 
     /**
@@ -93,6 +113,7 @@ contract Token is ERC20 {
      */
     function addTrustedIDP(address _idp) public onlyIDPAdmin {
         isTrustedIDP[_idp] = true;
+        emit TrustedIDPAdded(_idp);
     }
 
     /**
@@ -101,6 +122,7 @@ contract Token is ERC20 {
      */
     function removeTrustedIDP(address _idp) public onlyIDPAdmin {
         isTrustedIDP[_idp] = false;
+        emit TrustedIDPRemoved(_idp);
     }
 
     // ===== View Functions =====
