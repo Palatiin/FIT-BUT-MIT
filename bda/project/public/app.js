@@ -114,6 +114,9 @@ async function init() {
     connectWalletBtn.addEventListener('click', connectWallet);
     verifyIdentityBtn.addEventListener('click', verifyIdentity);
     transferTokensBtn.addEventListener('click', transferTokens);
+    mintTokensBtn.addEventListener('click', mintTokens);
+    addTrustedIDPBtn.addEventListener('click', addTrustedIDP);
+    removeTrustedIDPBtn.addEventListener('click', removeTrustedIDP);
 
     // Check if already connected through MetaMask
     if (window.ethereum && window.ethereum.selectedAddress) {
@@ -220,7 +223,12 @@ async function updateUserInfo() {
     try {
         // Check verification status
         console.log('User address:', state.userAddress);
-        state.userStatus = await state.tokenContract.getUserStatus(state.userAddress);
+        const userStatusData = await state.tokenContract.userStatus(state.userAddress);
+        state.userStatus = {
+            isVerified: userStatusData[0],
+            isMintingAdmin: userStatusData[1],
+            isIDPAdmin: userStatusData[2]
+        };
         console.log('User status:', state.userStatus);
         verificationStatusElement.textContent = state.userStatus.isVerified ? 'Yes' : 'No';
         mintingAdminStatusElement.textContent = state.userStatus.isMintingAdmin ? 'Yes' : 'No';
@@ -305,8 +313,8 @@ async function transferTokens() {
     if (!state.tokenContract) return;
     
     try {
-        const recipientAddress = document.getElementById('recipientAddress').value;
-        const amount = document.getElementById('tokenAmount').value;
+        const recipientAddress = document.getElementById('transferRecipientAddress').value;
+        const amount = document.getElementById('transferTokenAmount').value;
         
         if (!recipientAddress || !amount) {
             updateStatus('Please provide both recipient address and amount', 'warning');
@@ -336,6 +344,106 @@ async function transferTokens() {
         updateStatus('Token transfer successful!', 'success');
     } catch (error) {
         updateStatus('Failed to transfer tokens: ' + error.message, 'danger');
+        logToConsole('Error: ' + error.message);
+    }
+}
+
+// Mint tokens
+async function mintTokens() {
+    if (!state.tokenContract) return;
+    
+    try {
+        const recipientAddress = document.getElementById('mintRecipientAddress').value;
+        const amount = document.getElementById('mintTokenAmount').value;
+        
+        if (!recipientAddress || !amount) {
+            updateStatus('Please provide both recipient address and amount', 'warning');
+            return;
+        }
+        
+        updateStatus('Minting tokens...', 'info');
+        
+        // Call the smart contract function
+        const tx = await state.tokenContract.mint(recipientAddress, amount);
+        logToConsole('Transaction sent: ' + tx.hash);
+        
+        updateStatus('Mint transaction submitted. Waiting for confirmation...', 'info');
+        
+        // Wait for the transaction to be mined
+        await tx.wait();
+        
+        // Update user info
+        await updateUserInfo();
+        
+        updateStatus('Token minting successful!', 'success');
+    } catch (error) {
+        updateStatus('Failed to mint tokens: ' + error.message, 'danger');
+        logToConsole('Error: ' + error.message);
+    }
+}
+
+// Add trusted IDP
+async function addTrustedIDP() {
+    if (!state.tokenContract) return;
+    
+    try {
+        const idpAddress = document.getElementById('idpAddress').value;
+        
+        if (!idpAddress) {
+            updateStatus('Please provide an IDP address', 'warning');
+            return;
+        }
+        
+        updateStatus('Adding trusted IDP...', 'info');
+        
+        // Call the smart contract function
+        const tx = await state.tokenContract.addTrustedIDP(idpAddress);
+        logToConsole('Transaction sent: ' + tx.hash);
+        
+        updateStatus('Trusted IDP added. Waiting for confirmation...', 'info');
+        
+        // Wait for the transaction to be mined
+        await tx.wait();
+        
+        // Update user info
+        await updateUserInfo();
+        
+        updateStatus('Trusted IDP added successfully!', 'success');
+    } catch (error) {
+        updateStatus('Failed to add trusted IDP: ' + error.message, 'danger');
+        logToConsole('Error: ' + error.message);
+    }
+}
+
+// Remove trusted IDP
+async function removeTrustedIDP() {
+    if (!state.tokenContract) return;
+    
+    try {
+        const idpAddress = document.getElementById('idpAddress').value;
+        
+        if (!idpAddress) {
+            updateStatus('Please provide an IDP address', 'warning');
+            return;
+        }
+        
+        updateStatus('Removing trusted IDP...', 'info');
+        
+        // Call the smart contract function
+        const tx = await state.tokenContract.removeTrustedIDP(idpAddress);
+        logToConsole('Transaction sent: ' + tx.hash);
+        
+        updateStatus('Trusted IDP removed. Waiting for confirmation...', 'info');
+        
+        // Wait for the transaction to be mined
+        await tx.wait();
+        
+        // Update user info
+        await updateUserInfo();
+        
+        updateStatus('Trusted IDP removed successfully!', 'success');
+    } catch (error) {
+        updateStatus('Failed to remove trusted IDP: ' + error.message, 'danger');
         logToConsole('Error: ' + error.message);
     }
 }

@@ -196,6 +196,35 @@
   },
   {
     "type": "function",
+    "name": "getUserStatus",
+    "inputs": [
+      {
+        "name": "user",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "isVerified",
+        "type": "bool",
+        "internalType": "bool"
+      },
+      {
+        "name": "isMintingAdmin",
+        "type": "bool",
+        "internalType": "bool"
+      },
+      {
+        "name": "isIDPAdmin",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "maxDailyMint",
     "inputs": [],
     "outputs": [

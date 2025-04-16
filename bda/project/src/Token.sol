@@ -166,6 +166,10 @@ contract Token is ERC20 {
         return isTrustedIDP[idp];
     }
 
+    function getUserStatus(address user) public view returns (bool, bool, bool) {
+        return (userStatus[user].isVerified, userStatus[user].isMintingAdmin, userStatus[user].isIDPAdmin);
+    }
+
     // ===== Pure Functions =====
     function checkNotNull(address _address) internal pure {
         if (_address == address(0x0)) {
