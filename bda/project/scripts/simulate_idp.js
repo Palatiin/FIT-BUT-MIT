@@ -1,4 +1,4 @@
-const ethers = require('ethers');
+const { ethers } = require('ethers');
 const fs = require('fs');
 
 async function main() {
@@ -16,8 +16,10 @@ async function main() {
   const idpWallet = new ethers.Wallet(idpPrivateKey);
   console.log(`Using IDP Address: ${idpWallet.address}`);
   
-  // Sample user addresses to verify (in a real app, these would come from your verification process)
+  // Sample user addresses to verify
   const usersToVerify = [
+    "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", // anvil user address 0
+    "0xfc5ba757d1508506198cff41309bc0e3a577895c", // my test metamask address
     "0x7E5F4552091A69125d5DfCb7b8C2659029395Bdf", // test user address 0 
     "0x2B5AD5c4795c026514f8317c7a215E218DcCD6cF", // test user address 1
     "0x6813Eb9362372EEF6200f3b1dbC3f819671cBA69"  // test user address 2
@@ -33,7 +35,7 @@ async function main() {
     // Create the message string exactly as the smart contract does
     const message = `User with address ${userAddress} has verified their identity at ${timestamp}`;
     
-    // Hash the message (ethers v6 uses keccak256 and solidityPacked)
+    // Hash the message (ethers v6 uses solidityPacked for what was solidityPack in v5)
     const messageHash = ethers.keccak256(
       ethers.solidityPacked(
         ['string', 'address', 'string', 'uint256'],
@@ -41,8 +43,9 @@ async function main() {
       )
     );
     
-    // Sign the message hash
-    const signature = await idpWallet.signMessage(ethers.getBytes(messageHash));
+    // Sign the message hash (arrayify is now getBytes in v6)
+    const messageBytes = ethers.getBytes(messageHash);
+    const signature = await idpWallet.signMessage(messageBytes);
     
     // Store verification data
     verificationData.push({
@@ -76,7 +79,8 @@ async function main() {
   );
   
   // Convert to Ethereum signed message hash
-  const ethSignedMessageHash = ethers.hashMessage(ethers.getBytes(messageHash));
+  const messageBytes = ethers.getBytes(messageHash);
+  const ethSignedMessageHash = ethers.hashMessage(messageBytes);
   
   // Recover signer from signature
   const recoveredSigner = ethers.recoverAddress(ethSignedMessageHash, userData.signature);

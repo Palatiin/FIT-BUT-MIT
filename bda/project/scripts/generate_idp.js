@@ -1,6 +1,6 @@
 // Generate random IDP - private key + address
 
-const ethers = require('ethers');
+const { ethers } = require('ethers');
 
 const idpWallet = ethers.Wallet.createRandom();
 

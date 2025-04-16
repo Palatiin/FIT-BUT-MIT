@@ -10,11 +10,14 @@ contract Token is ERC20 {
     uint256 public dailyMinted;
     uint256 public mintDailyLimitResetTimestamp;
 
-    mapping(address => bool) public isTrustedIDP;
-
-    mapping(address => bool) private isMintingAdmin;
-    mapping(address => bool) private isIDPAdmin;
-    mapping(address => bool) private userVerificationStatus;
+    struct UserStatus {
+        bool isVerified;
+        bool isMintingAdmin;
+        bool isIDPAdmin;
+    }
+    mapping(address => UserStatus) public userStatus;
+    mapping(address => bool) private isTrustedIDP;
+    address[] private trustedIDPList;
 
     event IdentityVerified(address indexed user, uint256 timestamp);
     event TokensMinted(address indexed minter, address indexed to, uint256 amount);
@@ -42,16 +45,19 @@ contract Token is ERC20 {
         MAX_SUPPLY = _maxSupply;
         for (uint i = 0; i < _mintingAdmins.length; i++) {
             checkNotNull(_mintingAdmins[i]);
-            isMintingAdmin[_mintingAdmins[i]] = true;
+            userStatus[_mintingAdmins[i]].isMintingAdmin = true;
         }
         MAX_DAILY_MINT = _maxDailyMint;
         for (uint i = 0; i < _trustedIdentityProviders.length; i++) {
             checkNotNull(_trustedIdentityProviders[i]);
+            if (!isTrustedIDP[_trustedIdentityProviders[i]]) {
+                trustedIDPList.push(_trustedIdentityProviders[i]);
+            }
             isTrustedIDP[_trustedIdentityProviders[i]] = true;
         }
         for (uint i = 0; i < _idpAdmins.length; i++) {
             checkNotNull(_idpAdmins[i]);
-            isIDPAdmin[_idpAdmins[i]] = true;
+            userStatus[_idpAdmins[i]].isIDPAdmin = true;
         }
     }
 
@@ -83,13 +89,17 @@ contract Token is ERC20 {
         return true;
     }
 
+    function decimals() public view virtual override returns (uint8) {
+        return 0;
+    }
+
     /**
      * T1.4:  Verify user identity using a signed message from a trusted IDP
      * @param timestamp The Unix timestamp when the identity was verified
      * @param signature The signature from the IDP
      */
     function verifyIdentity(uint256 timestamp, bytes memory signature) public {
-        require(!userVerificationStatus[_msgSender()], "Identity already verified");
+        require(!userStatus[_msgSender()].isVerified, "Identity already verified");
         
         // Create the message that was signed
         bytes32 message = getMessageHash(_msgSender(), timestamp);
@@ -102,7 +112,7 @@ contract Token is ERC20 {
         require(isTrustedIDP[signer], "Signature not from trusted IDP");
         
         // Mark user as verified
-        userVerificationStatus[_msgSender()] = true;
+        userStatus[_msgSender()].isVerified = true;
         
         emit IdentityVerified(_msgSender(), timestamp);
     }
@@ -112,6 +122,9 @@ contract Token is ERC20 {
      * @param _idp: address of the IDP to add
      */
     function addTrustedIDP(address _idp) public onlyIDPAdmin {
+        if (!isTrustedIDP[_idp]) {
+            trustedIDPList.push(_idp);
+        }
         isTrustedIDP[_idp] = true;
         emit TrustedIDPAdded(_idp);
     }
@@ -121,6 +134,13 @@ contract Token is ERC20 {
      * @param _idp: address of the IDP to remove
      */
     function removeTrustedIDP(address _idp) public onlyIDPAdmin {
+        if (isTrustedIDP[_idp]) {
+            for (uint i = 0; i < trustedIDPList.length; i++) {
+                if (trustedIDPList[i] == _idp) {
+                    delete trustedIDPList[i];
+                }
+            }
+        }
         isTrustedIDP[_idp] = false;
         emit TrustedIDPRemoved(_idp);
     }
@@ -128,6 +148,22 @@ contract Token is ERC20 {
     // ===== View Functions =====
     function getCurrentTimestamp() internal view returns (uint256) {
         return block.timestamp;
+    }
+
+    function maxSupply() public view returns (uint256) {
+        return MAX_SUPPLY;
+    }
+
+    function maxDailyMint() public view returns (uint256) {
+        return MAX_DAILY_MINT;
+    }
+
+    function getTrustedIDPList() public view returns (address[] memory) {
+        return trustedIDPList;
+    }
+
+    function checkTrustedIDP(address idp) public view returns (bool) {
+        return isTrustedIDP[idp];
     }
 
     // ===== Pure Functions =====
@@ -183,12 +219,12 @@ contract Token is ERC20 {
 
     // ===== Modifiers =====
     modifier onlyMintingAdmin() {
-        require(isMintingAdmin[_msgSender()], "Not a minting admin");
+        require(userStatus[_msgSender()].isMintingAdmin, "Not a minting admin");
         _;
     }
 
     modifier onlyIDPAdmin() {
-        require(isIDPAdmin[_msgSender()], "Not an IDP admin");
+        require(userStatus[_msgSender()].isIDPAdmin, "Not an IDP admin");
         _;
     }
 
@@ -202,7 +238,7 @@ contract Token is ERC20 {
     }
 
     modifier isVerified(address user) {
-        require(userVerificationStatus[user], "User is not verified");
+        require(userStatus[user].isVerified, "User is not verified");
         _;
     }
 }
