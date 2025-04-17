@@ -191,7 +191,7 @@ async function updateUserInfo() {
     
     try {
         // Get user verification status, roles and balance
-        const userStatusData = await state.tokenContract.userStatus(state.userAddress);
+        const userStatusData = await state.tokenContract.getUserStatus(state.userAddress);
         state.userStatus = {
             isVerified: userStatusData[0],
             isMintingAdmin: userStatusData[1],

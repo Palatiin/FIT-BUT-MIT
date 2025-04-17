@@ -16,7 +16,7 @@ contract Token is ERC20 {
         bool isIDPAdmin;
     }
 
-    mapping(address => UserStatus) public userStatus;
+    mapping(address => UserStatus) private userStatus;
     mapping(address => bool) private isTrustedIDP;
     address[] private trustedIDPList;
 

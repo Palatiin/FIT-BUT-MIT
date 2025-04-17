@@ -55,7 +55,7 @@ contract TokenTest is Test {
         assertEq(
             token.checkTrustedIDP(address(0x67d3D8dbD7CDddf3C70Cf93F2152a2BbF6Be7557)), true, "IDP should be trusted"
         );
-        (bool isVerified, bool isMintingAdmin, bool isIDPAdmin) = token.userStatus(addresses[0]);
+        (bool isVerified, bool isMintingAdmin, bool isIDPAdmin) = token.getUserStatus(addresses[0]);
         assertEq(isVerified, false, "Address 0 should not be verified yet");
         assertEq(isMintingAdmin, true, "Address 0 should be a minting admin");
         assertEq(isIDPAdmin, true, "Address 0 should be an IDP admin");
@@ -81,7 +81,7 @@ contract TokenTest is Test {
             1744451468,
             hex"778d70ce55da76bc4a8c05e13c6c6a2a0c300acb3e9e9b19cd049feab835f7b0704d0fad4b534f28902aa504226dd0eec7643a4da3c61b3b77c2375c2a66f83a1b"
         );
-        (bool isVerified, bool isMintingAdmin, bool isIDPAdmin) = token.userStatus(addresses[0]);
+        (bool isVerified, bool isMintingAdmin, bool isIDPAdmin) = token.getUserStatus(addresses[0]);
         assertEq(isVerified, true, "Address 0 should be verified");
         assertEq(isMintingAdmin, true, "Address 0 should be a minting admin");
         assertEq(isIDPAdmin, true, "Address 0 should be an IDP admin");
@@ -101,14 +101,11 @@ contract TokenTest is Test {
             1744451468,
             hex"1111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111"
         );
-        
+
         vm.expectRevert("Invalid signature length");
         vm.prank(addresses[1]);
-        token.verifyIdentity(
-            1744451468,
-            hex"111111111111111111111111111111"
-        );
-        
+        token.verifyIdentity(1744451468, hex"111111111111111111111111111111");
+
         // Verify 2. address with invalid timestamp
         vm.expectRevert("Signature not from trusted IDP");
         vm.prank(addresses[1]);
