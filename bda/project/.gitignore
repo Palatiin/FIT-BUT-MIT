@@ -13,4 +13,7 @@ docs/
 # Dotenv file
 .env
 
+# Project specific
 lib/
+public/contract-abi.json
+

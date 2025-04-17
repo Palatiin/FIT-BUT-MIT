@@ -5,8 +5,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js",
-    "deploy-local": "node scripts/deploy-local.js"
+    "dev": "nodemon server.js"
   },
   "dependencies": {
     "ethers": "^5.7.2",

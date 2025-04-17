@@ -81,6 +81,7 @@ async function init() {
     try {
         const response = await fetch('./contract-abi.json');
         tokenABI = await response.json();
+        logToConsole('ABI loaded successfully');
     } catch (error) {
         logToConsole('Error loading ABI: ' + error.message);
         updateStatus('Error loading ABI: ' + error.message, 'danger');

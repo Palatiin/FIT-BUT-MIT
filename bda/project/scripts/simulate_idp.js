@@ -1,4 +1,8 @@
-const { ethers } = require('ethers');
+// IDP data used for local testing:
+// Private key: 0x19cfa6079c94c889a2b68223ec9a2e4170b7c977db7319c0e2cc7f82040297eb
+// - Address: 0x3f176887Ac19bbCcA11052E79BcF1533BD7CFFf9
+
+const ethers = require('ethers');
 const fs = require('fs');
 
 async function main() {
@@ -18,16 +22,14 @@ async function main() {
   
   // Sample user addresses to verify
   const usersToVerify = [
-    "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", // anvil user address 0
+    "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", // anvil test user address 0
     "0xfc5ba757d1508506198cff41309bc0e3a577895c", // my test metamask address
-    "0x7E5F4552091A69125d5DfCb7b8C2659029395Bdf", // test user address 0 
-    "0x2B5AD5c4795c026514f8317c7a215E218DcCD6cF", // test user address 1
-    "0x6813Eb9362372EEF6200f3b1dbC3f819671cBA69"  // test user address 2
+    "0x7E5F4552091A69125d5DfCb7b8C2659029395Bdf", // anvil test user address 1
+    "0x2B5AD5c4795c026514f8317c7a215E218DcCD6cF", // anvil test user address 2
+    "0x6813Eb9362372EEF6200f3b1dbC3f819671cBA69"  // anvil test user address 3
   ];
   
-  // Create the verification data for each user
   const verificationData = [];
-  
   for (const userAddress of usersToVerify) {
     // Current timestamp for verification
     const timestamp = Math.floor(Date.now() / 1000);
@@ -35,17 +37,17 @@ async function main() {
     // Create the message string exactly as the smart contract does
     const message = `User with address ${userAddress} has verified their identity at ${timestamp}`;
     
-    // Hash the message (ethers v6 uses solidityPacked for what was solidityPack in v5)
-    const messageHash = ethers.keccak256(
-      ethers.solidityPacked(
+    // Hash the message
+    const messageHash = ethers.utils.keccak256(
+      ethers.utils.solidityPack(
         ['string', 'address', 'string', 'uint256'],
         ['User with address ', userAddress, ' has verified their identity at ', timestamp]
       )
     );
     
-    // Sign the message hash (arrayify is now getBytes in v6)
-    const messageBytes = ethers.getBytes(messageHash);
-    const signature = await idpWallet.signMessage(messageBytes);
+    // Sign the message hash
+    const messageArray = ethers.utils.arrayify(messageHash);
+    const signature = await idpWallet.signMessage(messageArray);
     
     // Store verification data
     verificationData.push({
@@ -71,19 +73,18 @@ async function main() {
   const userData = verificationData[0];
   
   // Create message hash as the contract would
-  const messageHash = ethers.keccak256(
-    ethers.solidityPacked(
+  const messageHash = ethers.utils.keccak256(
+    ethers.utils.solidityPack(
       ['string', 'address', 'string', 'uint256'],
       ['User with address ', userData.userAddress, ' has verified their identity at ', userData.timestamp]
     )
   );
   
   // Convert to Ethereum signed message hash
-  const messageBytes = ethers.getBytes(messageHash);
-  const ethSignedMessageHash = ethers.hashMessage(messageBytes);
+  const ethSignedMessageHash = ethers.utils.hashMessage(ethers.utils.arrayify(messageHash));
   
   // Recover signer from signature
-  const recoveredSigner = ethers.recoverAddress(ethSignedMessageHash, userData.signature);
+  const recoveredSigner = ethers.utils.recoverAddress(ethSignedMessageHash, userData.signature);
   
   console.log(`IDP address: ${idpWallet.address}`);
   console.log(`Recovered signer address: ${recoveredSigner}`);
