@@ -8,20 +8,16 @@ contract TokenTest is Test {
     Token public token;
     address[] public addresses;
 
-    /**
-     * 5 addresses, first 2 are minting admins.
-     */
+    // 5 addresses, first one is minting admin and IDP admin.
     function initToken(uint256 _maxSupply, uint256 _maxDailyMint) public {
         delete addresses;
 
         for (uint256 i = 1; i < 5; i++) {
             addresses.push(vm.addr(i));
-            // console.log("Address", addresses[i-1]);
         }
 
-        address[] memory mintingAdmins = new address[](2);
+        address[] memory mintingAdmins = new address[](1);
         mintingAdmins[0] = addresses[0];
-        mintingAdmins[1] = addresses[1];
 
         address[] memory trustedIDPs = new address[](1);
         // Private key of the example IDP: 0x91e90072b136abfd4dec60420a22e330d5374519bda867c0406fdd650589201f
@@ -31,26 +27,6 @@ contract TokenTest is Test {
         idpAdmins[0] = addresses[0];
 
         token = new Token(_maxSupply, mintingAdmins, _maxDailyMint, trustedIDPs, idpAdmins);
-    }
-
-    function test_init_token() public {
-        initToken(1000, 100);
-        assertEq(token.totalSupply(), 0, "Total supply should be 0");
-        assertEq(
-            token.checkTrustedIDP(address(0x67d3D8dbD7CDddf3C70Cf93F2152a2BbF6Be7557)), true, "IDP should be trusted"
-        );
-        (bool isVerified, bool isMintingAdmin, bool isIDPAdmin) = token.userStatus(addresses[0]);
-        assertEq(isVerified, false, "Address 0 should not be verified yet");
-        assertEq(isMintingAdmin, true, "Address 0 should be a minting admin");
-        assertEq(isIDPAdmin, true, "Address 0 should be an IDP admin");
-        assertEq(token.getTrustedIDPList().length, 1, "There should be 1 trusted IDP");
-        assertEq(
-            token.getTrustedIDPList()[0],
-            address(0x67d3D8dbD7CDddf3C70Cf93F2152a2BbF6Be7557),
-            "The trusted IDP should be the example IDP"
-        );
-        assertEq(token.maxSupply(), 1000, "Max supply should be 1000");
-        assertEq(token.maxDailyMint(), 100, "Max daily mint should be 100");
     }
 
     function verifyFirstThreeAddresses() public {
@@ -73,6 +49,27 @@ contract TokenTest is Test {
         );
     }
 
+    function test_init_token() public {
+        initToken(1000, 100);
+        assertEq(token.totalSupply(), 0, "Total supply should be 0");
+        assertEq(
+            token.checkTrustedIDP(address(0x67d3D8dbD7CDddf3C70Cf93F2152a2BbF6Be7557)), true, "IDP should be trusted"
+        );
+        (bool isVerified, bool isMintingAdmin, bool isIDPAdmin) = token.userStatus(addresses[0]);
+        assertEq(isVerified, false, "Address 0 should not be verified yet");
+        assertEq(isMintingAdmin, true, "Address 0 should be a minting admin");
+        assertEq(isIDPAdmin, true, "Address 0 should be an IDP admin");
+        assertEq(token.getTrustedIDPList().length, 1, "There should be 1 trusted IDP");
+        assertEq(
+            token.getTrustedIDPList()[0],
+            address(0x67d3D8dbD7CDddf3C70Cf93F2152a2BbF6Be7557),
+            "The trusted IDP should be the example IDP"
+        );
+        assertEq(token.maxSupply(), 1000, "Max supply should be 1000");
+        assertEq(token.maxDailyMint(), 100, "Max daily mint should be 100");
+        assertEq(token.dailyMinted(), 0, "Daily minted should be 0");
+    }
+
     function test_verify_identity() public {
         initToken(1000, 100);
 
@@ -89,37 +86,41 @@ contract TokenTest is Test {
         assertEq(isMintingAdmin, true, "Address 0 should be a minting admin");
         assertEq(isIDPAdmin, true, "Address 0 should be an IDP admin");
 
-        // Verify 2. address
-        vm.expectEmit();
-        emit Token.IdentityVerified(addresses[1], 1744451468);
+        // Verify 1. address again
+        vm.expectRevert("Identity already verified");
+        vm.prank(addresses[0]);
+        token.verifyIdentity(
+            1744451468,
+            hex"778d70ce55da76bc4a8c05e13c6c6a2a0c300acb3e9e9b19cd049feab835f7b0704d0fad4b534f28902aa504226dd0eec7643a4da3c61b3b77c2375c2a66f83a1b"
+        );
+
+        // Verify 2. address with invalid signature
+        vm.expectRevert("Signature not from trusted IDP");
         vm.prank(addresses[1]);
         token.verifyIdentity(
             1744451468,
+            hex"1111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111"
+        );
+        
+        vm.expectRevert("Invalid signature length");
+        vm.prank(addresses[1]);
+        token.verifyIdentity(
+            1744451468,
+            hex"111111111111111111111111111111"
+        );
+        
+        // Verify 2. address with invalid timestamp
+        vm.expectRevert("Signature not from trusted IDP");
+        vm.prank(addresses[1]);
+        token.verifyIdentity(
+            1111111111,
             hex"f4ba43a5856dd02d60fdd17a1604d0e3ed4ace742b16107d612c9652fb9520a9168df8a74215e9ca4413d52fd64e81f9a725692dd55f82a6c54096ce982e2a781b"
-        );
-
-        // Verify 3. address
-        vm.expectEmit();
-        emit Token.IdentityVerified(addresses[2], 1744451468);
-        vm.prank(addresses[2]);
-        token.verifyIdentity(
-            1744451468,
-            hex"f748577b7f5f01ed0d840b7b56902a2b2a899608c6f8aaef7d23be633141d7ad3ac8c3df1c06d2554b673909b0bf264f5b96b5ed62ff8c4601b0b498a30199651c"
-        );
-
-        // Verify 3. address again
-        vm.expectRevert("Identity already verified");
-        vm.prank(addresses[2]);
-        token.verifyIdentity(
-            1744451468,
-            hex"f748577b7f5f01ed0d840b7b56902a2b2a899608c6f8aaef7d23be633141d7ad3ac8c3df1c06d2554b673909b0bf264f5b96b5ed62ff8c4601b0b498a30199651c"
         );
     }
 
     function test_add_trusted_idp() public {
         initToken(1000, 100);
         verifyFirstThreeAddresses();
-        assertEq(token.totalSupply(), 0, "Total supply should be 0");
 
         vm.expectEmit();
         emit Token.TrustedIDPAdded(address(0x3f176887Ac19bbCcA11052E79BcF1533BD7CFFf9));
@@ -148,7 +149,6 @@ contract TokenTest is Test {
     function test_mint_to_unverified_address() public {
         initToken(1000, 100);
         verifyFirstThreeAddresses();
-        assertEq(token.totalSupply(), 0, "Total supply should be 0");
 
         vm.expectRevert("User is not verified");
         vm.prank(addresses[0]);
@@ -158,7 +158,6 @@ contract TokenTest is Test {
     function test_mint_admin() public {
         initToken(1000, 100);
         verifyFirstThreeAddresses();
-        assertEq(token.totalSupply(), 0, "Total supply should be 0");
 
         // Test minting 10 tokens
         vm.expectEmit();
@@ -167,6 +166,7 @@ contract TokenTest is Test {
         token.mint(addresses[2], 10);
         assertEq(token.totalSupply(), 10, "Total supply should be 10");
         assertEq(token.balanceOf(addresses[2]), 10, "Balance of 2 should be 10");
+        assertEq(token.dailyMinted(), 10, "Daily minted should be 10");
 
         // Test non-admin cannot mint
         vm.expectRevert("Not a minting admin");
@@ -174,10 +174,9 @@ contract TokenTest is Test {
         token.mint(addresses[3], 10);
     }
 
-    function test_mint_over_total_supply() public {
+    function test_mint_over_max_supply() public {
         initToken(100, 200);
         verifyFirstThreeAddresses();
-        assertEq(token.totalSupply(), 0, "Total supply should be 0");
 
         vm.expectRevert("Max supply exceeded");
         vm.prank(addresses[0]);
@@ -187,7 +186,6 @@ contract TokenTest is Test {
     function test_mint_daily_limit() public {
         initToken(1000, 100);
         verifyFirstThreeAddresses();
-        assertEq(token.totalSupply(), 0, "Total supply should be 0");
 
         // Test minting 100 tokens
         vm.expectEmit();
@@ -195,7 +193,7 @@ contract TokenTest is Test {
         vm.prank(addresses[0]);
         token.mint(addresses[2], 100);
         assertEq(token.totalSupply(), 100, "Total supply should be 100");
-        assertEq(token.balanceOf(addresses[2]), 100, "Balance of 2 should be 100");
+        assertEq(token.dailyMinted(), 100, "Daily minted should be 100");
 
         // Test daily mint limit
         vm.expectRevert("Max daily mint exceeded");
@@ -205,17 +203,17 @@ contract TokenTest is Test {
         // Test daily mint limit reset
         vm.warp(block.timestamp + 1 days);
         vm.expectEmit();
-        emit Token.TokensMinted(addresses[0], addresses[2], 100);
+        emit Token.TokensMinted(addresses[0], addresses[2], 50);
         vm.prank(addresses[0]);
-        token.mint(addresses[2], 100);
-        assertEq(token.totalSupply(), 200, "Total supply should be 200");
-        assertEq(token.balanceOf(addresses[2]), 200, "Balance of 2 should be 200");
+        token.mint(addresses[2], 50);
+        assertEq(token.totalSupply(), 150, "Total supply should be 150");
+        assertEq(token.balanceOf(addresses[2]), 150, "Balance of 2 should be 150");
+        assertEq(token.dailyMinted(), 50, "Daily minted should be 50");
     }
 
     function test_transfer() public {
         initToken(1000, 100);
         verifyFirstThreeAddresses();
-        assertEq(token.totalSupply(), 0, "Total supply should be 0");
 
         // First, mint 10 tokens to address 2
         vm.expectEmit();
