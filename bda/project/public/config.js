@@ -1,9 +1,8 @@
 // Configuration for the dApp
 const appConfig = {
-    // Replace with your deployed contract address
     contractAddress: "0x5FbDB2315678afecb367f032d93F642f64180aa3",
     
-    // Network configuration
+    // Network configuration for local testing, needs to be set up in MetaMask as well
     networks: {
         // Anvil local blockchain
         anvil: {

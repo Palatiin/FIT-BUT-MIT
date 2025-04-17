@@ -183,6 +183,24 @@
   },
   {
     "type": "function",
+    "name": "getDailyMintQuota",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "getTrustedIDPList",
     "inputs": [],
     "outputs": [
@@ -206,17 +224,17 @@
     ],
     "outputs": [
       {
-        "name": "isVerified",
+        "name": "",
         "type": "bool",
         "internalType": "bool"
       },
       {
-        "name": "isMintingAdmin",
+        "name": "",
         "type": "bool",
         "internalType": "bool"
       },
       {
-        "name": "isIDPAdmin",
+        "name": "",
         "type": "bool",
         "internalType": "bool"
       }

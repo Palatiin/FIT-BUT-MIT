@@ -170,6 +170,10 @@ contract Token is ERC20 {
         return (userStatus[user].isVerified, userStatus[user].isMintingAdmin, userStatus[user].isIDPAdmin);
     }
 
+    function getDailyMintQuota() public view returns (uint256, uint256) {
+        return (dailyMinted, MAX_DAILY_MINT);
+    }
+
     // ===== Pure Functions =====
     function checkNotNull(address _address) internal pure {
         if (_address == address(0x0)) {

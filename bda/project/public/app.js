@@ -1,18 +1,5 @@
-// Contract ABI (simplified for the functions we need)
-// This is a fallback in case we don't have the full ABI
-let tokenABI = [
-    // Read functions
-    "function balanceOf(address) view returns (uint256)",
-    // Write functions
-    "function verifyIdentity(uint256 timestamp, bytes memory signature)",
-    "function transfer(address to, uint256 value) returns (bool)",
-    // Events
-    "event IdentityVerified(address indexed user, uint256 timestamp)",
-    "event TokensTransferred(address indexed from, address indexed to, uint256 amount)",
-    "event TokensMinted(address indexed minter, address indexed to, uint256 amount)"
-];
-
 // App state
+let tokenABI = [];
 const state = {
     provider: null,
     signer: null,
@@ -26,7 +13,7 @@ const state = {
     tokenBalance: 0,
     contractAddress: appConfig ? appConfig.contractAddress : "", // Get from config if available
     currentNetwork: appConfig ? appConfig.defaultNetwork : null, // Current selected network
-    customProvider: null // For non-MetaMask providers (like Anvil)
+    customProvider: null
 };
 
 // DOM elements
@@ -44,6 +31,7 @@ const tokenBalanceElement = document.getElementById('tokenBalance');
 const statusMessageElement = document.getElementById('statusMessage');
 const logContainerElement = document.getElementById('logContainer');
 const networkSelectElement = document.getElementById('networkSelect');
+const dailyMintQuotaElement = document.getElementById('dailyMintQuota');
 
 // Buttons
 const connectWalletBtn = document.getElementById('connectWalletBtn');
@@ -75,8 +63,6 @@ async function init() {
             }
             networkSelectElement.appendChild(option);
         }
-        
-        // Add event listener for network changes
         networkSelectElement.addEventListener('change', handleNetworkChange);
     }
     
@@ -85,13 +71,7 @@ async function init() {
     
     // Check if MetaMask is installed
     if (typeof window.ethereum === 'undefined') {
-        // Even if MetaMask is not available, we can still use a custom provider
-        // for local networks like Anvil
-        if (state.currentNetwork === 'anvil') {
-            logToConsole('MetaMask not detected, but using Anvil local provider');
-        } else {
-            updateStatus('MetaMask is not installed. Please install MetaMask or use a local network.', 'warning');
-        }
+        updateStatus('MetaMask is not installed. Please install MetaMask.', 'danger');
     } else {
         // Add event listener for account changes
         window.ethereum.on('accountsChanged', handleAccountsChanged);
@@ -100,14 +80,10 @@ async function init() {
     // Try to load the full ABI from the JSON file if available
     try {
         const response = await fetch('./contract-abi.json');
-        if (response.ok) {
-            tokenABI = await response.json();
-            logToConsole('Loaded full ABI from JSON file');
-        } else {
-            logToConsole('Using fallback ABI (simplified)');
-        }
+        tokenABI = await response.json();
     } catch (error) {
-        logToConsole('Error loading ABI, using fallback: ' + error.message);
+        logToConsole('Error loading ABI: ' + error.message);
+        updateStatus('Error loading ABI: ' + error.message, 'danger');
     }
 
     // Add event listeners
@@ -138,28 +114,20 @@ function initializeProvider() {
     }
     
     // For Anvil or other local networks, create a JSON-RPC provider
+    // TODO check when on sepolia testnet
     if (state.currentNetwork === 'anvil') {
         state.customProvider = new ethers.providers.JsonRpcProvider(networkConfig.rpcUrl);
         logToConsole(`Connected to local Anvil network at ${networkConfig.rpcUrl}`);
-        
-        // Enable the connect button even without MetaMask for local testing
-        updateStatus('Ready to connect to local Anvil network', 'info');
     }
 }
 
-// Handle network change
 function handleNetworkChange(event) {
     state.currentNetwork = event.target.value;
     logToConsole(`Network changed to: ${state.currentNetwork}`);
-    
-    // Reset the app state
     resetApp();
-    
-    // Initialize the new provider
     initializeProvider();
 }
 
-// Connect wallet function
 async function connectWallet() {
     console.log('Connecting wallet...');
     try {
@@ -178,7 +146,7 @@ async function connectWallet() {
                 state.signer
             );
             
-            // Get user verification status and balance
+            // Get user verification status, roles and balance
             await updateUserInfo();
         } else {
             updateStatus('Contract address is not set. Please deploy your contract and set the address in config.js.', 'warning');
@@ -221,15 +189,13 @@ async function updateUserInfo() {
     if (!state.tokenContract) return;
     
     try {
-        // Check verification status
-        console.log('User address:', state.userAddress);
+        // Get user verification status, roles and balance
         const userStatusData = await state.tokenContract.userStatus(state.userAddress);
         state.userStatus = {
             isVerified: userStatusData[0],
             isMintingAdmin: userStatusData[1],
             isIDPAdmin: userStatusData[2]
         };
-        console.log('User status:', state.userStatus);
         verificationStatusElement.textContent = state.userStatus.isVerified ? 'Yes' : 'No';
         mintingAdminStatusElement.textContent = state.userStatus.isMintingAdmin ? 'Yes' : 'No';
         idpAdminStatusElement.textContent = state.userStatus.isIDPAdmin ? 'Yes' : 'No';
@@ -249,6 +215,8 @@ async function updateUserInfo() {
 
         if (state.userStatus.isMintingAdmin) {
             mintTokensCard.classList.remove('hidden');
+            const dailyMintQuota = await state.tokenContract.getDailyMintQuota();
+            dailyMintQuotaElement.textContent = `${dailyMintQuota[0]}/${dailyMintQuota[1]}`;
         } else {
             mintTokensCard.classList.add('hidden');
         }
@@ -415,7 +383,6 @@ async function addTrustedIDP() {
     }
 }
 
-// Remove trusted IDP
 async function removeTrustedIDP() {
     if (!state.tokenContract) return;
     
@@ -451,7 +418,7 @@ async function removeTrustedIDP() {
 // Event handlers
 function handleAccountsChanged(accounts) {
     if (accounts.length === 0) {
-        // User disconnected their wallet
+        // User disconnected the wallet
         resetApp();
         updateStatus('Wallet disconnected', 'info');
     } else if (accounts[0] !== state.userAddress) {
@@ -475,7 +442,6 @@ function handleIdentityVerified(user, timestamp) {
 function handleTokensTransferred(from, to, amount) {
     if (from.toLowerCase() === state.userAddress.toLowerCase() || 
         to.toLowerCase() === state.userAddress.toLowerCase()) {
-        updateStatus('Token transfer completed', 'success');
         logToConsole(`Tokens transferred: ${amount} TKN from ${from} to ${to}`);
         updateUserInfo();
     }
@@ -483,9 +449,11 @@ function handleTokensTransferred(from, to, amount) {
 
 function handleTokensMinted(minter, to, amount) {
     if (to.toLowerCase() === state.userAddress.toLowerCase()) {
-        updateStatus('Token minted', 'success');
-        logToConsole(`Tokens minted: ${amount} TKN to ${to}`);
+        logToConsole(`Tokens minted: Address ${minter} minted ${amount} TKN to ${to}`);
         updateUserInfo();
+    } else if (state.userStatus.isMintingAdmin) {
+        logToConsole(`Tokens minted: Address ${minter} minted ${amount} TKN to ${to}`);
+        updateUserInfo();  // Update the daily mint quota
     }
 }
 
