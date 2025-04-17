@@ -15,6 +15,7 @@ contract Token is ERC20 {
         bool isMintingAdmin;
         bool isIDPAdmin;
     }
+
     mapping(address => UserStatus) public userStatus;
     mapping(address => bool) private isTrustedIDP;
     address[] private trustedIDPList;
@@ -26,7 +27,7 @@ contract Token is ERC20 {
     event TrustedIDPRemoved(address indexed idp);
 
     /**
-     * T1.1: extend ERC20 constructor to initialize MAX_SUPPLY 
+     * T1.1: extend ERC20 constructor to initialize MAX_SUPPLY
      * T1.2: mintingAdmin role, maxDailyMint
      * T1.4: trustedIdentityProviders
      * T1.5: idpAdmin role
@@ -40,22 +41,21 @@ contract Token is ERC20 {
         uint256 _maxDailyMint,
         address[] memory _trustedIdentityProviders,
         address[] memory _idpAdmins
-    ) ERC20("Token", "TKN")
-    {
+    ) ERC20("Token", "TKN") {
         MAX_SUPPLY = _maxSupply;
-        for (uint i = 0; i < _mintingAdmins.length; i++) {
+        for (uint256 i = 0; i < _mintingAdmins.length; i++) {
             checkNotNull(_mintingAdmins[i]);
             userStatus[_mintingAdmins[i]].isMintingAdmin = true;
         }
         MAX_DAILY_MINT = _maxDailyMint;
-        for (uint i = 0; i < _trustedIdentityProviders.length; i++) {
+        for (uint256 i = 0; i < _trustedIdentityProviders.length; i++) {
             checkNotNull(_trustedIdentityProviders[i]);
             if (!isTrustedIDP[_trustedIdentityProviders[i]]) {
                 trustedIDPList.push(_trustedIdentityProviders[i]);
             }
             isTrustedIDP[_trustedIdentityProviders[i]] = true;
         }
-        for (uint i = 0; i < _idpAdmins.length; i++) {
+        for (uint256 i = 0; i < _idpAdmins.length; i++) {
             checkNotNull(_idpAdmins[i]);
             userStatus[_idpAdmins[i]].isIDPAdmin = true;
         }
@@ -82,7 +82,13 @@ contract Token is ERC20 {
      * - `to` cannot be the zero address.
      * - the caller must have a balance of at least `value`.
      */
-    function transfer(address to, uint256 value) public override isVerified(_msgSender()) isVerified(to) returns (bool) {
+    function transfer(address to, uint256 value)
+        public
+        override
+        isVerified(_msgSender())
+        isVerified(to)
+        returns (bool)
+    {
         address owner = _msgSender();
         _transfer(owner, to, value);
         emit TokensTransferred(owner, to, value);
@@ -100,20 +106,20 @@ contract Token is ERC20 {
      */
     function verifyIdentity(uint256 timestamp, bytes memory signature) public {
         require(!userStatus[_msgSender()].isVerified, "Identity already verified");
-        
+
         // Create the message that was signed
         bytes32 message = getMessageHash(_msgSender(), timestamp);
         bytes32 ethSignedMessageHash = getEthSignedMessageHash(message);
-        
+
         // Recover the signer's address
         address signer = recoverSigner(ethSignedMessageHash, signature);
-        
+
         // Check if the signer is a trusted IDP
         require(isTrustedIDP[signer], "Signature not from trusted IDP");
-        
+
         // Mark user as verified
         userStatus[_msgSender()].isVerified = true;
-        
+
         emit IdentityVerified(_msgSender(), timestamp);
     }
 
@@ -135,7 +141,7 @@ contract Token is ERC20 {
      */
     function removeTrustedIDP(address _idp) public onlyIDPAdmin {
         if (isTrustedIDP[_idp]) {
-            for (uint i = 0; i < trustedIDPList.length; i++) {
+            for (uint256 i = 0; i < trustedIDPList.length; i++) {
                 if (trustedIDPList[i] == _idp) {
                     delete trustedIDPList[i];
                 }
@@ -212,7 +218,7 @@ contract Token is ERC20 {
      */
     function recoverSigner(bytes32 ethSignedMessageHash, bytes memory signature) internal pure returns (address) {
         require(signature.length == 65, "Invalid signature length");
-        
+
         bytes32 r;
         bytes32 s;
         uint8 v;
@@ -221,7 +227,7 @@ contract Token is ERC20 {
             s := mload(add(signature, 64))
             v := byte(0, mload(add(signature, 96)))
         }
-        
+
         return ecrecover(ethSignedMessageHash, v, r, s);
     }
 
