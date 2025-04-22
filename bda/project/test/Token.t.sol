@@ -67,7 +67,9 @@ contract TokenTest is Test {
         );
         assertEq(token.maxSupply(), 1000, "Max supply should be 1000");
         assertEq(token.maxDailyMint(), 100, "Max daily mint should be 100");
-        assertEq(token.dailyMinted(), 0, "Daily minted should be 0");
+        (uint256 dailyMinted, uint256 maxDailyMint) = token.getDailyMintQuota();
+        assertEq(dailyMinted, 0, "Daily minted should be 0");
+        assertEq(maxDailyMint, 100, "Max daily mint should be 100");
     }
 
     function test_verify_identity() public {
@@ -163,7 +165,8 @@ contract TokenTest is Test {
         token.mint(addresses[2], 10);
         assertEq(token.totalSupply(), 10, "Total supply should be 10");
         assertEq(token.balanceOf(addresses[2]), 10, "Balance of 2 should be 10");
-        assertEq(token.dailyMinted(), 10, "Daily minted should be 10");
+        (uint256 dailyMinted,) = token.getDailyMintQuota();
+        assertEq(dailyMinted, 10, "Daily minted should be 10");
 
         // Test non-admin cannot mint
         vm.expectRevert("Not a minting admin");
@@ -190,7 +193,8 @@ contract TokenTest is Test {
         vm.prank(addresses[0]);
         token.mint(addresses[2], 100);
         assertEq(token.totalSupply(), 100, "Total supply should be 100");
-        assertEq(token.dailyMinted(), 100, "Daily minted should be 100");
+        (uint256 dailyMinted, uint256 maxDailyMint) = token.getDailyMintQuota();
+        assertEq(dailyMinted, 100, "Daily minted should be 100");
 
         // Test daily mint limit
         vm.expectRevert("Max daily mint exceeded");
@@ -205,7 +209,8 @@ contract TokenTest is Test {
         token.mint(addresses[2], 50);
         assertEq(token.totalSupply(), 150, "Total supply should be 150");
         assertEq(token.balanceOf(addresses[2]), 150, "Balance of 2 should be 150");
-        assertEq(token.dailyMinted(), 50, "Daily minted should be 50");
+        (dailyMinted, maxDailyMint) = token.getDailyMintQuota();
+        assertEq(dailyMinted, 50, "Daily minted should be 50");
     }
 
     function test_transfer() public {

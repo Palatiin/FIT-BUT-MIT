@@ -7,8 +7,8 @@ contract Token is ERC20 {
     uint256 public immutable MAX_SUPPLY;
     uint256 public immutable MAX_DAILY_MINT;
 
-    uint256 public dailyMinted;
-    uint256 public mintDailyLimitResetTimestamp;
+    uint256 private dailyMinted;
+    uint256 private mintDailyLimitResetTimestamp;
 
     struct UserStatus {
         bool isVerified;
@@ -59,6 +59,9 @@ contract Token is ERC20 {
             checkNotNull(_idpAdmins[i]);
             userStatus[_idpAdmins[i]].isIDPAdmin = true;
         }
+
+        // Initialize the reset timestamp to the next midnight
+        mintDailyLimitResetTimestamp = 0;
     }
 
     /**
@@ -180,6 +183,18 @@ contract Token is ERC20 {
         return (dailyMinted, MAX_DAILY_MINT);
     }
 
+    function getNextMintLimitResetTimestamp() public view returns (uint256) {
+        return mintDailyLimitResetTimestamp;
+    }
+
+    function getNextMidnightTimestamp() internal view returns (uint256) {
+        uint256 currentTimestamp = getCurrentTimestamp();
+        // Calculate seconds since midnight
+        uint256 secondsSinceMidnight = currentTimestamp % 1 days;
+        // Calculate timestamp for the next midnight
+        return currentTimestamp + 1 days - secondsSinceMidnight;
+    }
+
     // ===== Pure Functions =====
     function checkNotNull(address _address) internal pure {
         if (_address == address(0x0)) {
@@ -243,9 +258,11 @@ contract Token is ERC20 {
     }
 
     modifier checkDailyMintLimit(uint256 amount) {
-        if (getCurrentTimestamp() >= mintDailyLimitResetTimestamp) {
+        uint256 currentTimestamp = getCurrentTimestamp();
+        if (currentTimestamp >= mintDailyLimitResetTimestamp) {
+            // Reset the daily minted amount, update the reset timestamp to the next midnight
             dailyMinted = 0;
-            mintDailyLimitResetTimestamp = getCurrentTimestamp() + 1 days;
+            mintDailyLimitResetTimestamp = getNextMidnightTimestamp();
         }
         require(dailyMinted + amount <= MAX_DAILY_MINT, "Max daily mint exceeded");
         _;
