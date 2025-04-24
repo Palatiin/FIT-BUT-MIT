@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.28;
 
 import {Test, console} from "forge-std/Test.sol";
 import {Token} from "../src/Token.sol";
@@ -117,7 +117,7 @@ contract TokenTest is Test {
         );
     }
 
-    function test_add_trusted_idp() public {
+    function test_add_and_remove_idp() public {
         initToken(1000, 100);
         verifyFirstThreeAddresses();
 
@@ -130,10 +130,22 @@ contract TokenTest is Test {
             token.checkTrustedIDP(address(0x3f176887Ac19bbCcA11052E79BcF1533BD7CFFf9)), true, "IDP should be trusted"
         );
 
+        // Try adding the same IDP again
+        vm.expectRevert("IDP already exists");
+        vm.prank(addresses[0]);
+        token.addTrustedIDP(address(0x3f176887Ac19bbCcA11052E79BcF1533BD7CFFf9));
+
+        // Try adding an IDP as a non-IDP admin
         vm.expectRevert("Not an IDP admin");
         vm.prank(addresses[1]);
         token.addTrustedIDP(address(0x3f176887Ac19bbCcA11052E79BcF1533BD7CFFf9));
 
+        // Try removing an IDP as a non-IDP admin
+        vm.expectRevert("Not an IDP admin");
+        vm.prank(addresses[1]);
+        token.removeTrustedIDP(address(0x3f176887Ac19bbCcA11052E79BcF1533BD7CFFf9));
+
+        // Try removing the IDP
         vm.expectEmit();
         emit Token.TrustedIDPRemoved(address(0x3f176887Ac19bbCcA11052E79BcF1533BD7CFFf9));
         vm.prank(addresses[0]);
@@ -143,6 +155,11 @@ contract TokenTest is Test {
             false,
             "IDP should not be trusted"
         );
+
+        // Try removing the IDP again
+        vm.expectRevert("IDP not found");
+        vm.prank(addresses[0]);
+        token.removeTrustedIDP(address(0x3f176887Ac19bbCcA11052E79BcF1533BD7CFFf9));
     }
 
     function test_mint_to_unverified_address() public {
@@ -203,6 +220,11 @@ contract TokenTest is Test {
 
         // Test daily mint limit reset
         vm.warp(block.timestamp + 1 days);
+
+        (dailyMinted, maxDailyMint) = token.getDailyMintQuota();
+        assertEq(dailyMinted, 0, "Daily minted should be 0");
+        assertEq(maxDailyMint, 100, "Max daily mint should be 100");
+
         vm.expectEmit();
         emit Token.TokensMinted(addresses[0], addresses[2], 50);
         vm.prank(addresses[0]);
@@ -238,5 +260,55 @@ contract TokenTest is Test {
         vm.expectRevert("User is not verified");
         vm.prank(addresses[1]);
         token.transfer(addresses[3], 10);
+    }
+
+    function testFuzz_idp_admin_management(address newIDP) public {
+        initToken(1000, 100);
+        verifyFirstThreeAddresses();
+        
+        // Ensure the new IDP is a valid address (not zero, not already trusted)
+        vm.assume(newIDP != address(0));
+        vm.assume(newIDP != address(0x67d3D8dbD7CDddf3C70Cf93F2152a2BbF6Be7557));
+        
+        // Add a new trusted IDP
+        vm.expectEmit();
+        emit Token.TrustedIDPAdded(newIDP);
+        vm.prank(addresses[0]);
+        token.addTrustedIDP(newIDP);
+        
+        // Verify the IDP was added
+        assertTrue(token.checkTrustedIDP(newIDP), "New IDP should be trusted");
+        
+        // Remove the IDP
+        vm.expectEmit();
+        emit Token.TrustedIDPRemoved(newIDP);
+        vm.prank(addresses[0]);
+        token.removeTrustedIDP(newIDP);
+        
+        // Verify the IDP was removed
+        assertFalse(token.checkTrustedIDP(newIDP), "IDP should be removed from trusted list");
+    }
+
+    function testFuzz_transfer_preserves_total_supply(uint256 mintAmount, uint256 transferAmount) public {
+        // Setup with reasonable values
+        vm.assume(mintAmount > 0 && mintAmount <= 5000);
+        vm.assume(transferAmount > 0 && transferAmount <= mintAmount);
+        
+        initToken(10000, 10000);
+        verifyFirstThreeAddresses();
+        
+        // Mint tokens to address[2]
+        vm.prank(addresses[0]);
+        token.mint(addresses[2], mintAmount);
+        
+        uint256 totalSupplyBefore = token.totalSupply();
+        
+        // Transfer tokens from address[2] to address[1]
+        vm.prank(addresses[2]);
+        token.transfer(addresses[1], transferAmount);
+        
+        // Verify total supply remained unchanged
+        assertEq(token.totalSupply(), totalSupplyBefore, "Total supply should remain constant after transfers");
+        assertEq(token.balanceOf(addresses[2]) + token.balanceOf(addresses[1]), mintAmount, "Sum of balances should equal initial mint");
     }
 }

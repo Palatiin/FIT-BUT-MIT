@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.28;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
@@ -69,7 +69,7 @@ contract Token is ERC20 {
      * @param to: address of the recipient
      * @param amount: amount of tokens to mint
      */
-    function mint(address to, uint256 amount) public onlyMintingAdmin isVerified(to) checkDailyMintLimit(amount) {
+    function mint(address to, uint256 amount) public onlyMintingAdmin isVerified(to) updateDailyMintLimit checkDailyMintLimit(amount) {
         require(totalSupply() + amount <= MAX_SUPPLY, "Max supply exceeded");
 
         _mint(to, amount);
@@ -131,6 +131,7 @@ contract Token is ERC20 {
      * @param _idp: address of the IDP to add
      */
     function addTrustedIDP(address _idp) public onlyIDPAdmin {
+        require(!isTrustedIDP[_idp], "IDP already exists");
         if (!isTrustedIDP[_idp]) {
             trustedIDPList.push(_idp);
         }
@@ -143,10 +144,13 @@ contract Token is ERC20 {
      * @param _idp: address of the IDP to remove
      */
     function removeTrustedIDP(address _idp) public onlyIDPAdmin {
+        require(isTrustedIDP[_idp], "IDP not found");
         if (isTrustedIDP[_idp]) {
-            for (uint256 i = 0; i < trustedIDPList.length; i++) {
+            uint256 idpListLength = trustedIDPList.length;
+            for (uint256 i = 0; i < idpListLength; i++) {
                 if (trustedIDPList[i] == _idp) {
                     delete trustedIDPList[i];
+                    break;
                 }
             }
         }
@@ -180,7 +184,10 @@ contract Token is ERC20 {
     }
 
     function getDailyMintQuota() public view returns (uint256, uint256) {
-        return (dailyMinted, MAX_DAILY_MINT);
+        if (getCurrentTimestamp() >= mintDailyLimitResetTimestamp) {
+            return (0, MAX_DAILY_MINT);
+        }
+        return (dailyMinted, MAX_DAILY_MINT - dailyMinted);
     }
 
     function getNextMintLimitResetTimestamp() public view returns (uint256) {
@@ -257,13 +264,16 @@ contract Token is ERC20 {
         _;
     }
 
-    modifier checkDailyMintLimit(uint256 amount) {
+    modifier updateDailyMintLimit() {
         uint256 currentTimestamp = getCurrentTimestamp();
         if (currentTimestamp >= mintDailyLimitResetTimestamp) {
-            // Reset the daily minted amount, update the reset timestamp to the next midnight
             dailyMinted = 0;
             mintDailyLimitResetTimestamp = getNextMidnightTimestamp();
         }
+        _;
+    }
+
+    modifier checkDailyMintLimit(uint256 amount) {
         require(dailyMinted + amount <= MAX_DAILY_MINT, "Max daily mint exceeded");
         _;
     }
