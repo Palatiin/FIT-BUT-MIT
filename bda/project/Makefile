@@ -20,8 +20,7 @@ deploy:
 		--constructor-args $(MAX_SUPPLY) [$${MINTING_ADMINS}] $(MAX_DAILY_MINT) [$${TRUSTED_IDPS}] [$${IDP_ADMINS}]
 
 deploy-sepolia:
-	forge script scripts/Deploy.s.sol:DeployScript \
-		--rpc-url https://eth-sepolia.g.alchemy.com/v2/dIG9Kp4nWgOenq87EKoiB_eeq8xCxem-
+	forge script scripts/Deploy.s.sol:DeployScript --rpc-url $(RPC_URL) --broadcast
 
 dapp:
 	node scripts/extract-abi.js && node server.js

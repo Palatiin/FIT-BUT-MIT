@@ -69,7 +69,13 @@ contract Token is ERC20 {
      * @param to: address of the recipient
      * @param amount: amount of tokens to mint
      */
-    function mint(address to, uint256 amount) public onlyMintingAdmin isVerified(to) updateDailyMintLimit checkDailyMintLimit(amount) {
+    function mint(address to, uint256 amount)
+        public
+        onlyMintingAdmin
+        isVerified(to)
+        updateDailyMintLimit
+        checkDailyMintLimit(amount)
+    {
         require(totalSupply() + amount <= MAX_SUPPLY, "Max supply exceeded");
 
         _mint(to, amount);
@@ -187,7 +193,7 @@ contract Token is ERC20 {
         if (getCurrentTimestamp() >= mintDailyLimitResetTimestamp) {
             return (0, MAX_DAILY_MINT);
         }
-        return (dailyMinted, MAX_DAILY_MINT - dailyMinted);
+        return (dailyMinted, MAX_DAILY_MINT);
     }
 
     function getNextMintLimitResetTimestamp() public view returns (uint256) {

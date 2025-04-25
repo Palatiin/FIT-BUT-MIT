@@ -113,13 +113,8 @@ function initializeProvider() {
         logToConsole(`Network configuration not found for: ${state.currentNetwork}`);
         return;
     }
-    
-    // For Anvil or other local networks, create a JSON-RPC provider
-    // TODO check when on sepolia testnet
-    if (state.currentNetwork === 'anvil') {
-        state.customProvider = new ethers.providers.JsonRpcProvider(networkConfig.rpcUrl);
-        logToConsole(`Connected to local Anvil network at ${networkConfig.rpcUrl}`);
-    }
+
+    state.contractAddress = networkConfig.contractAddress;
 }
 
 function handleNetworkChange(event) {
@@ -127,6 +122,7 @@ function handleNetworkChange(event) {
     logToConsole(`Network changed to: ${state.currentNetwork}`);
     resetApp();
     initializeProvider();
+    connectWallet();
 }
 
 async function connectWallet() {

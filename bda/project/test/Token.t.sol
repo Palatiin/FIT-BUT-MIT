@@ -265,26 +265,26 @@ contract TokenTest is Test {
     function testFuzz_idp_admin_management(address newIDP) public {
         initToken(1000, 100);
         verifyFirstThreeAddresses();
-        
+
         // Ensure the new IDP is a valid address (not zero, not already trusted)
         vm.assume(newIDP != address(0));
         vm.assume(newIDP != address(0x67d3D8dbD7CDddf3C70Cf93F2152a2BbF6Be7557));
-        
+
         // Add a new trusted IDP
         vm.expectEmit();
         emit Token.TrustedIDPAdded(newIDP);
         vm.prank(addresses[0]);
         token.addTrustedIDP(newIDP);
-        
+
         // Verify the IDP was added
         assertTrue(token.checkTrustedIDP(newIDP), "New IDP should be trusted");
-        
+
         // Remove the IDP
         vm.expectEmit();
         emit Token.TrustedIDPRemoved(newIDP);
         vm.prank(addresses[0]);
         token.removeTrustedIDP(newIDP);
-        
+
         // Verify the IDP was removed
         assertFalse(token.checkTrustedIDP(newIDP), "IDP should be removed from trusted list");
     }
@@ -293,22 +293,26 @@ contract TokenTest is Test {
         // Setup with reasonable values
         vm.assume(mintAmount > 0 && mintAmount <= 5000);
         vm.assume(transferAmount > 0 && transferAmount <= mintAmount);
-        
+
         initToken(10000, 10000);
         verifyFirstThreeAddresses();
-        
+
         // Mint tokens to address[2]
         vm.prank(addresses[0]);
         token.mint(addresses[2], mintAmount);
-        
+
         uint256 totalSupplyBefore = token.totalSupply();
-        
+
         // Transfer tokens from address[2] to address[1]
         vm.prank(addresses[2]);
         token.transfer(addresses[1], transferAmount);
-        
+
         // Verify total supply remained unchanged
         assertEq(token.totalSupply(), totalSupplyBefore, "Total supply should remain constant after transfers");
-        assertEq(token.balanceOf(addresses[2]) + token.balanceOf(addresses[1]), mintAmount, "Sum of balances should equal initial mint");
+        assertEq(
+            token.balanceOf(addresses[2]) + token.balanceOf(addresses[1]),
+            mintAmount,
+            "Sum of balances should equal initial mint"
+        );
     }
 }
